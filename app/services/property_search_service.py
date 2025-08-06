@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.logging import get_logger
 from app.repositories.property_repository import PropertyRepository
 from app.repositories.property_use_repository import PropertyUseRepository
-from app.schemas.search import GeneralSearchInput, PropertyResult, SearchMeta, GeneralSearchResponse
+from app.schemas.search import SearchRequest, PropertyResponse, SearchResponse
 
 
 class PropertySearchService:
@@ -31,7 +31,7 @@ class PropertySearchService:
         self.property_use_repository = PropertyUseRepository(db)
         self.logger = get_logger(__name__)
     
-    def search_properties(self, search_input: GeneralSearchInput) -> GeneralSearchResponse:
+    def search_properties(self, search_input: SearchRequest) -> SearchResponse:
         """
         Main search method that orchestrates the entire search process.
         
@@ -39,27 +39,26 @@ class PropertySearchService:
             search_input: Search criteria and filters
             
         Returns:
-            GeneralSearchResponse: Formatted search results
+            SearchResponse: Formatted search results
         """
         start_time = time.time()
         
         try:
             # Step 1: Validate polygon
-            if not self._validate_polygon(search_input.polygon):
+            if search_input.polygon and not self._validate_polygon(search_input.polygon):
                 self.logger.warning(f"Invalid polygon provided: {search_input.polygon}")
                 return self._create_empty_response(search_input, start_time)
             
-            # Step 2: Get properties within polygon
-            barmanpre_list = self._get_properties_in_polygon(search_input.polygon)
-            if not barmanpre_list:
-                self.logger.info("No properties found within the specified polygon")
-                return self._create_empty_response(search_input, start_time)
+            # Step 2: Get properties within polygon (if provided)
+            barmanpre_list = []
+            if search_input.polygon:
+                barmanpre_list = self._get_properties_in_polygon(search_input.polygon)
+                if not barmanpre_list:
+                    self.logger.info("No properties found within the specified polygon")
+                    return self._create_empty_response(search_input, start_time)
             
             # Step 3: Fetch characteristics data (main filtering table)
-            characteristics = self.repository.get_property_characteristics(barmanpre_list)
-            if not characteristics:
-                self.logger.info("No characteristics data found for properties")
-                return self._create_empty_response(search_input, start_time)
+            characteristics = self.repository.get_property_characteristics(barmanpre_list) if barmanpre_list else []
             
             # Step 4: Apply business filters to characteristics
             filtered_characteristics = self._apply_business_filters(characteristics, search_input)
@@ -79,10 +78,17 @@ class PropertySearchService:
             
             # Step 7: Create response
             execution_time = (time.time() - start_time) * 1000
-            meta = self._create_search_meta(search_input, len(property_results), execution_time)
             
             self.logger.info(f"Search completed successfully. Found {len(property_results)} properties in {execution_time:.2f}ms")
-            return GeneralSearchResponse(meta=meta, data=property_results)
+            return SearchResponse(
+                success=True,
+                message=f"Found {len(property_results)} properties",
+                data=property_results,
+                total=len(property_results),
+                limit=search_input.limit,
+                offset=search_input.offset,
+                request_id=f"req_{int(time.time())}"
+            )
             
         except Exception as e:
             self.logger.error(f"Error in property search: {e}")
@@ -92,49 +98,39 @@ class PropertySearchService:
         """Get properties within the specified polygon."""
         return self.repository.get_properties_in_polygon(polygon)
     
-    def _apply_business_filters(self, characteristics: List, search_input: GeneralSearchInput) -> List:
+    def _apply_business_filters(self, characteristics: List, search_input: SearchRequest) -> List:
         """Apply business logic filters to characteristics."""
         filtered = []
         
-        # Get property use codes based on property_type (if not already provided)
-        property_use_codes = search_input.property_use_codes
-        if not property_use_codes and search_input.property_type:
-            property_use_codes = self.property_use_repository.get_property_use_codes_by_type(search_input.property_type)
+        # Get property use codes based on tipoinmueble
+        property_use_codes = []
+        if search_input.tipoinmueble:
+            if isinstance(search_input.tipoinmueble, list):
+                property_use_codes = self.property_use_repository.get_property_use_codes_by_type(search_input.tipoinmueble)
+            else:
+                property_use_codes = self.property_use_repository.get_property_use_codes_by_type([search_input.tipoinmueble])
         
         for char in characteristics:
-            # Skip if no characteristics data
-            if not char:
-                continue
-                
-            # Area filters (preaconst)
-            if search_input.min_area > 0 and (char.preaconst is None or char.preaconst < search_input.min_area):
-                continue
-            if search_input.max_area > 0 and (char.preaconst is None or char.preaconst > search_input.max_area):
+            # Property type filter
+            if property_use_codes and char.precuso not in property_use_codes:
                 continue
             
-            # Age filters (prevetustzmin/prevetustzmax)
-            if search_input.min_age > 0 or search_input.max_age > 0:
-                if char.prevetustzmin is not None:
-                    current_year = datetime.now().year
-                    age = current_year - char.prevetustzmin
-                    
-                    if search_input.min_age > 0 and age < search_input.min_age:
-                        continue
-                    if search_input.max_age > 0 and age > search_input.max_age:
-                        continue
-                else:
-                    # If prevetustzmin is None but age filter is applied, filter it out
-                    if search_input.min_age > 0 or search_input.max_age > 0:
-                        continue
+            # Area filters
+            if search_input.min_area and char.preaconst and char.preaconst < search_input.min_area:
+                continue
+            if search_input.max_area and char.preaconst and char.preaconst > search_input.max_area:
+                continue
+            
+            # Age filters
+            if search_input.min_age and char.prevetustz and char.prevetustz < search_input.min_age:
+                continue
+            if search_input.max_age and char.prevetustz and char.prevetustz > search_input.max_age:
+                continue
             
             # Stratum filters
-            if search_input.min_stratum > 0 and (char.estrato is None or char.estrato < search_input.min_stratum):
+            if search_input.min_stratum and char.estrato and char.estrato < search_input.min_stratum:
                 continue
-            if search_input.max_stratum > 0 and (char.estrato is None or char.estrato > search_input.max_stratum):
-                continue
-            
-            # Property use codes filter (from property_type or direct input)
-            if property_use_codes and char.preusoph not in property_use_codes:
+            if search_input.max_stratum and char.estrato and char.estrato > search_input.max_stratum:
                 continue
             
             filtered.append(char)
@@ -142,12 +138,8 @@ class PropertySearchService:
         return filtered
     
     def _validate_polygon(self, polygon: str) -> bool:
-        """Validate polygon input."""
+        """Validate polygon WKT format."""
         if not polygon or not isinstance(polygon, str):
-            return False
-        
-        # Check for empty or 'none' values
-        if polygon.strip() == '' or 'none' in polygon.lower():
             return False
         
         # Basic WKT polygon validation
@@ -157,72 +149,73 @@ class PropertySearchService:
         return True
     
     def _transform_to_response_format(self, characteristics: List, property_data: List, 
-                                    geometry_data: List[Dict]) -> List[PropertyResult]:
-        """Transform database objects to API response format."""
-        # Create lookup dictionaries for faster access
-        property_lookup = {p.barmanpre: p for p in property_data}
-        geometry_lookup = {g["barmanpre"]: g["wkt"] for g in geometry_data}
-        
+                                    geometry_data: List[Dict]) -> List[PropertyResponse]:
+        """Transform database results to response format."""
         results = []
+        
+        # Create lookup dictionaries for faster access
+        property_lookup = {p.barmanpre: p for p in property_data} if property_data else {}
+        geometry_lookup = {g.get('barmanpre'): g for g in geometry_data} if geometry_data else {}
+        
         for char in characteristics:
-            prop_data = property_lookup.get(char.barmanpre)
-            wkt = geometry_lookup.get(char.barmanpre)
+            property_info = property_lookup.get(char.barmanpre, {})
+            geometry_info = geometry_lookup.get(char.barmanpre, {})
             
-            result = PropertyResult(
-                barmanpre=str(char.barmanpre or ""),
-                preaconst=char.preaconst,
-                preaterre=char.preaterre,
-                prevetustz=char.prevetustzmin,
-                precuso=char.preusoph,
-                precdestin=None,
-                estrato=char.estrato,
-                predios=str(char.predios) if char.predios else "0",
-                connpisos=str(char.connpisos) if char.connpisos else "0",
-                connsotano=str(char.connsotano) if char.connsotano else "0",
-                contsemis=str(char.contsemis) if char.contsemis else "0",
-                conelevaci=str(char.conelevaci) if char.conelevaci else "0",
-                formato_direccion=char.formato_direccion,
-                nombre_conjunto=char.nombre_conjunto,
-                prenbarrio=char.prenbarrio,
-                precbarrio=char.precbarrio,
-                locnombre=char.locnombre,
-                preusoph=char.preusoph,
-                manzcodigo=char.manzcodigo,
-                wkt=wkt,
-                # Additional fields from property_data if available
-                prechip=prop_data.prechip if prop_data else None,
-                predirecc=prop_data.predirecc if prop_data else None,
-                matriculainmobiliaria=prop_data.matriculainmobiliaria if prop_data else None
+            # Create characteristics dict
+            char_dict = {
+                'barmanpre': char.barmanpre,
+                'preaconst': char.preaconst,
+                'preaterre': char.preaterre,
+                'prevetustz': char.prevetustz,
+                'precuso': char.precuso,
+                'precdestin': char.precdestin,
+                'estrato': char.estrato,
+                'predios': char.predios,
+                'connpisos': char.connpisos,
+                'connsotano': char.connsotano,
+                'contsemis': char.contsemis,
+                'conelevaci': char.conelevaci,
+                'formato_direccion': char.formato_direccion,
+                'nombre_conjunto': char.nombre_conjunto,
+                'prenbarrio': char.prenbarrio,
+                'precbarrio': char.precbarrio,
+                'locnombre': char.locnombre,
+                'preusoph': char.preusoph,
+                'manzcodigo': char.manzcodigo,
+                'prechip': char.prechip,
+                'predirecc': char.predirecc,
+                'matriculainmobiliaria': char.matriculainmobiliaria
+            }
+            
+            # Create property response
+            result = PropertyResponse(
+                id=int(char.barmanpre) if char.barmanpre.isdigit() else hash(char.barmanpre) % 1000000,
+                title=f"Property {char.barmanpre}",
+                description=f"Property in {char.prenbarrio or 'Unknown'} neighborhood",
+                price=None,  # Price not available in current data
+                property_type=char.preusoph,
+                area=char.preaconst,
+                address=char.predirecc or char.formato_direccion,
+                city="Bogotá",
+                state="Cundinamarca",
+                zip_code=None,
+                is_available=True,
+                characteristics=char_dict,
+                geometry=geometry_info
             )
+            
             results.append(result)
         
         return results
     
-    def _create_search_meta(self, search_input: GeneralSearchInput, total_results: int, 
-                          execution_time_ms: float) -> SearchMeta:
-        """Create search metadata."""
-        import uuid
-        
-        return SearchMeta(
-            total_results=total_results,
-            execution_time_ms=execution_time_ms,
-            request_id=str(uuid.uuid4()),
-            filters_applied={
-                "property_type": search_input.property_type,
-                "min_area": search_input.min_area,
-                "max_area": search_input.max_area,
-                "min_age": search_input.min_age,
-                "max_age": search_input.max_age,
-                "min_stratum": search_input.min_stratum,
-                "max_stratum": search_input.max_stratum,
-                "property_use_codes": search_input.property_use_codes,
-                "polygon": search_input.polygon[:100] + "..." if len(search_input.polygon) > 100 else search_input.polygon
-            },
-            timestamp=datetime.now()
-        )
-    
-    def _create_empty_response(self, search_input: GeneralSearchInput, start_time: float) -> GeneralSearchResponse:
+    def _create_empty_response(self, search_input: SearchRequest, start_time: float) -> SearchResponse:
         """Create empty response when no results found."""
-        execution_time = (time.time() - start_time) * 1000
-        meta = self._create_search_meta(search_input, 0, execution_time)
-        return GeneralSearchResponse(meta=meta, data=[]) 
+        return SearchResponse(
+            success=True,
+            message="No properties found matching the criteria",
+            data=[],
+            total=0,
+            limit=search_input.limit,
+            offset=search_input.offset,
+            request_id=f"req_{int(time.time())}"
+        ) 

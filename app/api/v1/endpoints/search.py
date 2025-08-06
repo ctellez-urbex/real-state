@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.logging import get_logger
 from app.services.property_search_service import PropertySearchService
-from app.schemas.search import GeneralSearchInput, GeneralSearchResponse
+from app.schemas.search import SearchRequest, SearchResponse
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -18,9 +18,9 @@ def get_search_service(db: Session = Depends(get_db)) -> PropertySearchService:
     return PropertySearchService(db)
 
 
-@router.post("/general", response_model=GeneralSearchResponse)
+@router.post("/general", response_model=SearchResponse)
 async def general_search(
-    search_input: GeneralSearchInput,
+    search_input: SearchRequest,
     background_tasks: BackgroundTasks,
     search_service: PropertySearchService = Depends(get_search_service)
 ):
@@ -35,7 +35,7 @@ async def general_search(
     - Background task support for metrics
     """
     try:
-        logger.info(f"Received search request with polygon: {search_input.polygon[:50]}...")
+        logger.info(f"Received search request with polygon: {search_input.polygon[:50] if search_input.polygon else 'None'}...")
         
         # Add background task for metrics collection
         background_tasks.add_task(_collect_search_metrics, search_input)
@@ -84,7 +84,7 @@ async def get_metrics():
     }
 
 
-async def _collect_search_metrics(search_input: GeneralSearchInput):
+async def _collect_search_metrics(search_input: SearchRequest):
     """Background task to collect search metrics."""
     # TODO: Implement metrics collection
-    logger.info(f"Collecting metrics for search: {search_input.property_type}") 
+    logger.info(f"Collecting metrics for search: {search_input.tipoinmueble}") 

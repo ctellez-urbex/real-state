@@ -1,209 +1,200 @@
 """
 Search schemas for the Real Estate API.
+
+This module contains Pydantic models for search requests and responses,
+including validation for search parameters and polygon geometry.
 """
 
-from typing import List, Optional
-from pydantic import BaseModel, Field, validator
-from datetime import datetime
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field, field_validator
+import re
 
 
-class GeneralSearchInput(BaseModel):
-    """Input schema for general property search."""
+class SearchRequest(BaseModel):
+    """
+    Search request model for property search.
     
-    # Property type filter
-    property_type: List[str] = Field(
-        default=["All"], 
-        description="List of property types to filter by"
-    )
+    This model validates and processes search parameters including
+    polygon geometry, property filters, and pagination options.
+    """
     
-    # Area filters (in square meters)
-    min_area: float = Field(
-        default=0.0, 
-        ge=0.0, 
-        description="Minimum built area in square meters"
-    )
-    max_area: float = Field(
-        default=0.0, 
-        ge=0.0, 
-        description="Maximum built area in square meters"
+    # Geometry search
+    polygon: Optional[str] = Field(
+        None,
+        description="WKT polygon for spatial search",
+        json_schema_extra={"example": "POLYGON((-74.1 4.6, -74.0 4.6, -74.0 4.7, -74.1 4.7, -74.1 4.6))"}
     )
     
-    # Age filters (in years)
-    min_age: int = Field(
-        default=0, 
-        ge=0, 
-        description="Minimum property age in years"
-    )
-    max_age: int = Field(
-        default=0, 
-        ge=0, 
-        description="Maximum property age in years"
+    # Property filters
+    tipoinmueble: Optional[Union[str, List[str]]] = Field(
+        None,
+        description="Property type filter (single value or list)",
+        json_schema_extra={"example": ["apartamento", "casa"]}
     )
     
-    # Socioeconomic stratum filters
-    min_stratum: int = Field(
-        default=0, 
-        ge=0, 
-        le=6, 
-        description="Minimum socioeconomic stratum (0-6)"
+    # Area filters
+    min_area: Optional[float] = Field(
+        None,
+        description="Minimum area in square meters",
+        ge=0,
+        json_schema_extra={"example": 50.0}
     )
-    max_stratum: int = Field(
-        default=0, 
-        ge=0, 
-        le=6, 
-        description="Maximum socioeconomic stratum (0-6)"
-    )
-    
-    # Property use codes
-    property_use_codes: List[str] = Field(
-        default=[], 
-        description="List of property use codes to filter by"
+    max_area: Optional[float] = Field(
+        None,
+        description="Maximum area in square meters",
+        ge=0,
+        json_schema_extra={"example": 200.0}
     )
     
-    # Geographic polygon (WKT format)
-    polygon: str = Field(
-        ..., 
-        description="WKT polygon for geographic search (e.g., 'POLYGON ((-74.052315 4.690699, ...))')"
+    # Age filters
+    min_age: Optional[int] = Field(
+        None,
+        description="Minimum property age in years",
+        ge=0,
+        json_schema_extra={"example": 0}
+    )
+    max_age: Optional[int] = Field(
+        None,
+        description="Maximum property age in years",
+        ge=0,
+        json_schema_extra={"example": 10}
     )
     
-    @validator('polygon')
+    # Stratum filters
+    min_stratum: Optional[int] = Field(
+        None,
+        description="Minimum stratum (1-6)",
+        ge=1,
+        le=6,
+        json_schema_extra={"example": 3}
+    )
+    max_stratum: Optional[int] = Field(
+        None,
+        description="Maximum stratum (1-6)",
+        ge=1,
+        le=6,
+        json_schema_extra={"example": 5}
+    )
+    
+    # Price filters
+    min_price: Optional[float] = Field(
+        None,
+        description="Minimum price in COP",
+        ge=0,
+        json_schema_extra={"example": 100000000}
+    )
+    max_price: Optional[float] = Field(
+        None,
+        description="Maximum price in COP",
+        ge=0,
+        json_schema_extra={"example": 500000000}
+    )
+    
+    # Pagination
+    limit: Optional[int] = Field(
+        100,
+        description="Maximum number of results",
+        ge=1,
+        le=1000,
+        json_schema_extra={"example": 50}
+    )
+    offset: Optional[int] = Field(
+        0,
+        description="Number of results to skip",
+        ge=0,
+        json_schema_extra={"example": 0}
+    )
+
+    @field_validator('polygon')
+    @classmethod
     def validate_polygon(cls, v):
-        """Validate that polygon is a valid WKT format."""
-        if not v or not isinstance(v, str):
-            raise ValueError('Polygon is required and must be a string')
+        """Validate polygon WKT format."""
+        if v is None:
+            return v
         
+        v = v.strip()
+        if not v:
+            return None
+            
         # Basic WKT polygon validation
-        if not v.upper().startswith('POLYGON'):
-            raise ValueError('Polygon must be in WKT POLYGON format')
+        polygon_pattern = r'^POLYGON\s*\(\s*\(\s*([^)]+)\s*\)\s*\)$'
+        if not re.match(polygon_pattern, v, re.IGNORECASE):
+            raise ValueError('Invalid polygon WKT format. Expected: POLYGON((x1 y1, x2 y2, ...))')
         
         return v
-    
-    @validator('max_area')
-    def validate_area_range(cls, v, values):
-        """Validate that max_area is greater than min_area when both are specified."""
-        min_area = values.get('min_area', 0)
-        if v > 0 and min_area > 0 and v < min_area:
-            raise ValueError('max_area must be greater than min_area')
+
+    @field_validator('max_area')
+    @classmethod
+    def validate_max_area(cls, v, info):
+        """Validate max_area is greater than min_area."""
+        if v is not None and 'min_area' in info.data and info.data['min_area'] is not None:
+            if v <= info.data['min_area']:
+                raise ValueError('max_area must be greater than min_area')
         return v
-    
-    @validator('max_age')
-    def validate_age_range(cls, v, values):
-        """Validate that max_age is greater than min_age when both are specified."""
-        min_age = values.get('min_age', 0)
-        if v > 0 and min_age > 0 and v < min_age:
-            raise ValueError('max_age must be greater than min_age')
+
+    @field_validator('max_age')
+    @classmethod
+    def validate_max_age(cls, v, info):
+        """Validate max_age is greater than min_age."""
+        if v is not None and 'min_age' in info.data and info.data['min_age'] is not None:
+            if v <= info.data['min_age']:
+                raise ValueError('max_age must be greater than min_age')
         return v
-    
-    @validator('max_stratum')
-    def validate_stratum_range(cls, v, values):
-        """Validate that max_stratum is greater than min_stratum when both are specified."""
-        min_stratum = values.get('min_stratum', 0)
-        if v > 0 and min_stratum > 0 and v < min_stratum:
-            raise ValueError('max_stratum must be greater than min_stratum')
+
+    @field_validator('max_stratum')
+    @classmethod
+    def validate_max_stratum(cls, v, info):
+        """Validate max_stratum is greater than min_stratum."""
+        if v is not None and 'min_stratum' in info.data and info.data['min_stratum'] is not None:
+            if v <= info.data['min_stratum']:
+                raise ValueError('max_stratum must be greater than min_stratum')
         return v
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "property_type": ["Residential", "Commercial"],
-                "min_area": 50.0,
-                "max_area": 200.0,
-                "min_age": 0,
-                "max_age": 20,
-                "min_stratum": 3,
-                "max_stratum": 5,
-                "property_use_codes": ["001", "002"],
-                "polygon": "POLYGON ((-74.052315 4.690699, -74.052422 4.689929, -74.051349 4.689779, -74.051285 4.690399, -74.052315 4.690699))"
-            }
-        }
+
+    @field_validator('max_price')
+    @classmethod
+    def validate_max_price(cls, v, info):
+        """Validate max_price is greater than min_price."""
+        if v is not None and 'min_price' in info.data and info.data['min_price'] is not None:
+            if v <= info.data['min_price']:
+                raise ValueError('max_price must be greater than min_price')
+        return v
 
 
-class PropertyResult(BaseModel):
-    """Schema for individual property search result."""
+class PropertyResponse(BaseModel):
+    """
+    Property response model for search results.
     
-    barmanpre: str = Field(..., description="Barmanpre property identifier")
-    preaconst: Optional[float] = Field(None, description="Built area in square meters")
-    preaterre: Optional[float] = Field(None, description="Land area in square meters")
-    prevetustz: Optional[int] = Field(None, description="Property age in years")
-    precuso: Optional[str] = Field(None, description="Property use code")
-    precdestin: Optional[str] = Field(None, description="Property destination code")
-    estrato: Optional[int] = Field(None, description="Socioeconomic stratum")
-    predios: Optional[str] = Field(None, description="Property information")
-    connpisos: Optional[str] = Field(None, description="Floor information")
-    connsotano: Optional[str] = Field(None, description="Basement information")
-    contsemis: Optional[str] = Field(None, description="Semi-basement information")
-    conelevaci: Optional[str] = Field(None, description="Elevation information")
-    formato_direccion: Optional[str] = Field(None, description="Formatted address")
-    nombre_conjunto: Optional[str] = Field(None, description="Building complex name")
-    prenbarrio: Optional[str] = Field(None, description="Neighborhood name")
-    precbarrio: Optional[str] = Field(None, description="Neighborhood code")
-    locnombre: Optional[str] = Field(None, description="District name")
-    preusoph: Optional[str] = Field(None, description="Property use")
-    manzcodigo: Optional[str] = Field(None, description="Block code")
-    wkt: Optional[str] = Field(None, description="WKT geometry representation")
-    prechip: Optional[str] = Field(None, description="Property chip code")
-    predirecc: Optional[str] = Field(None, description="Property address")
-    matriculainmobiliaria: Optional[str] = Field(None, description="Property registration number")
+    This model represents a single property in the search response,
+    including basic information and characteristics.
+    """
     
-    class Config:
-        from_attributes = True
+    id: int = Field(..., description="Property ID")
+    title: str = Field(..., description="Property title")
+    description: Optional[str] = Field(None, description="Property description")
+    price: Optional[float] = Field(None, description="Property price in COP")
+    property_type: Optional[str] = Field(None, description="Property type")
+    area: Optional[float] = Field(None, description="Property area in square meters")
+    address: Optional[str] = Field(None, description="Property address")
+    city: Optional[str] = Field(None, description="Property city")
+    state: Optional[str] = Field(None, description="Property state")
+    zip_code: Optional[str] = Field(None, description="Property zip code")
+    is_available: bool = Field(True, description="Property availability status")
+    characteristics: Optional[dict] = Field(None, description="Property characteristics")
+    geometry: Optional[dict] = Field(None, description="Property geometry data")
 
 
-class SearchMeta(BaseModel):
-    """Metadata for search results."""
+class SearchResponse(BaseModel):
+    """
+    Search response model.
     
-    timestamp: datetime = Field(..., description="Search execution timestamp")
-    request_id: str = Field(..., description="Unique request identifier")
-    total_results: int = Field(..., description="Total number of results found")
-    filters_applied: dict = Field(..., description="Filters applied to the search")
-    execution_time_ms: float = Field(..., description="Search execution time in milliseconds")
+    This model represents the complete search response including
+    results, pagination information, and metadata.
+    """
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "timestamp": "2024-01-15T10:30:00.000Z",
-                "request_id": "550e8400-e29b-41d4-a716-446655440000",
-                "total_results": 150,
-                "filters_applied": {
-                    "property_type": ["Residential"],
-                    "min_area": 50.0,
-                    "max_area": 200.0
-                },
-                "execution_time_ms": 245.67
-            }
-        }
-
-
-class GeneralSearchResponse(BaseModel):
-    """Response schema for general property search."""
-    
-    meta: SearchMeta = Field(..., description="Search metadata")
-    data: List[PropertyResult] = Field(..., description="List of property results")
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "meta": {
-                    "timestamp": "2024-01-15T10:30:00.000Z",
-                    "request_id": "550e8400-e29b-41d4-a716-446655440000",
-                    "total_results": 150,
-                    "filters_applied": {
-                        "property_type": ["Residential"],
-                        "min_area": 50.0,
-                        "max_area": 200.0
-                    },
-                    "execution_time_ms": 245.67
-                },
-                "data": [
-                    {
-                        "barmanpre": "1100100000000000001",
-                        "preaconst": 120.5,
-                        "preaterre": 150.0,
-                        "prevetustz": 15,
-                        "estrato": 4,
-                        "prenbarrio": "Chapinero",
-                        "wkt": "POINT (-74.052315 4.690699)"
-                    }
-                ]
-            }
-        } 
+    success: bool = Field(..., description="Search success status")
+    message: str = Field(..., description="Response message")
+    data: List[PropertyResponse] = Field(..., description="Search results")
+    total: int = Field(..., description="Total number of results")
+    limit: int = Field(..., description="Results limit used")
+    offset: int = Field(..., description="Results offset used")
+    request_id: Optional[str] = Field(None, description="Unique request identifier") 

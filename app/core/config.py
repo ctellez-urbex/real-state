@@ -5,8 +5,9 @@ This module contains all configuration settings using Pydantic Settings
 for environment variable management and type safety.
 """
 
+import os
 from typing import List
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -53,7 +54,77 @@ class Settings(BaseSettings):
             f"mysql+mysqlconnector://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
-    @validator("API_KEYS", pre=True)
+    @field_validator("THREAD_POOL_SIZE", mode="before")
+    @classmethod
+    def validate_thread_pool_size(cls, v):
+        """Validate and clean THREAD_POOL_SIZE value."""
+        if isinstance(v, str):
+            # Extract only the numeric part if there's concatenation
+            import re
+            match = re.search(r'^(\d+)', v.strip())
+            if match:
+                return int(match.group(1))
+            # If no number found, return default
+            return 10
+        return v
+
+    @field_validator("DB_PORT", mode="before")
+    @classmethod
+    def validate_db_port(cls, v):
+        """Validate and clean DB_PORT value."""
+        if isinstance(v, str):
+            # Extract only the numeric part if there's concatenation
+            import re
+            match = re.search(r'^(\d+)', v.strip())
+            if match:
+                return int(match.group(1))
+            # If no number found, return default
+            return 3306
+        return v
+
+    @field_validator("EXTERNAL_API_TIMEOUT", mode="before")
+    @classmethod
+    def validate_external_api_timeout(cls, v):
+        """Validate and clean EXTERNAL_API_TIMEOUT value."""
+        if isinstance(v, str):
+            # Extract only the numeric part if there's concatenation
+            import re
+            match = re.search(r'^(\d+)', v.strip())
+            if match:
+                return int(match.group(1))
+            # If no number found, return default
+            return 30
+        return v
+
+    @field_validator("EXTERNAL_API_RETRY_ATTEMPTS", mode="before")
+    @classmethod
+    def validate_external_api_retry_attempts(cls, v):
+        """Validate and clean EXTERNAL_API_RETRY_ATTEMPTS value."""
+        if isinstance(v, str):
+            # Extract only the numeric part if there's concatenation
+            import re
+            match = re.search(r'^(\d+)', v.strip())
+            if match:
+                return int(match.group(1))
+            # If no number found, return default
+            return 3
+        return v
+
+    @field_validator("MAX_WORKERS", mode="before")
+    @classmethod
+    def validate_max_workers(cls, v):
+        """Validate and clean MAX_WORKERS value."""
+        if isinstance(v, str):
+            # Extract only the numeric part if there's concatenation
+            import re
+            match = re.search(r'^(\d+)', v.strip())
+            if match:
+                return int(match.group(1))
+            # If no number found, return default
+            return 4
+        return v
+
+    @field_validator("API_KEYS", mode="before")
     @classmethod
     def validate_api_keys(cls, v) -> List[str]:
         """Parse API keys from comma-separated string or list."""
@@ -65,7 +136,7 @@ class Settings(BaseSettings):
             return []
         return v
 
-    @validator("ALLOWED_HOSTS", pre=True)
+    @field_validator("ALLOWED_HOSTS", mode="before")
     @classmethod
     def validate_allowed_hosts(cls, v) -> List[str]:
         """Parse ALLOWED_HOSTS from comma-separated string or list."""
@@ -75,7 +146,7 @@ class Settings(BaseSettings):
             return [host.strip() for host in v.split(",") if host.strip()]
         return v
 
-    @validator("ALLOWED_ORIGINS", pre=True)
+    @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def validate_allowed_origins(cls, v) -> List[str]:
         """Parse ALLOWED_ORIGINS from comma-separated string or list."""
@@ -85,10 +156,11 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True
+    )
 
 
 # Global settings instance

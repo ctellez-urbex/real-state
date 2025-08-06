@@ -12,7 +12,7 @@ from app.services.property_search_service import PropertySearchService
 from app.repositories.property_repository import PropertyRepository
 from app.repositories.property_use_repository import PropertyUseRepository
 from app.api.v1.endpoints.search import get_search_service
-from app.schemas.search import GeneralSearchInput, PropertyResult, SearchMeta, GeneralSearchResponse
+from app.schemas.search import SearchRequest, PropertyResponse, SearchResponse
 
 client = TestClient(app)
 
@@ -405,8 +405,8 @@ class TestPropertySearchService:
     def test_search_properties_no_polygon_properties(self):
         """Test search when no properties found in polygon."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=0,
@@ -429,8 +429,8 @@ class TestPropertySearchService:
     def test_search_properties_no_characteristics(self):
         """Test search when no characteristics data found."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=0,
@@ -453,8 +453,8 @@ class TestPropertySearchService:
     def test_search_properties_invalid_polygon(self):
         """Test search with invalid polygon."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=0,
@@ -478,8 +478,8 @@ class TestPropertySearchService:
     def test_search_properties_with_filters(self):
         """Test search with filters applied."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=50,
             max_area=200,
             min_age=0,
@@ -561,8 +561,8 @@ class TestPropertySearchService:
     def test_search_properties_exception(self):
         """Test search with exception handling."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=0,
@@ -581,8 +581,8 @@ class TestPropertySearchService:
     def test_search_properties_no_filters_match(self):
         """Test search when no properties match filters."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=1000,  # Very high area that won't match
             max_area=0,
             min_age=0,
@@ -629,8 +629,8 @@ class TestPropertySearchService:
     def test_search_properties_with_age_filters(self):
         """Test search with age filters."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=10,
@@ -709,8 +709,8 @@ class TestPropertySearchService:
     def test_apply_business_filters_area_filter(self):
         """Test area filtering logic."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=100,
             max_area=200,
             min_age=0,
@@ -760,8 +760,8 @@ class TestPropertySearchService:
     def test_apply_business_filters_stratum_filter(self):
         """Test stratum filtering logic."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=0,
@@ -808,18 +808,18 @@ class TestPropertySearchService:
         assert len(result) == 1
         assert result[0] == mock_char1
     
-    def test_apply_business_filters_with_property_type_residencial(self):
-        """Test filtering with property_type instead of property_use_codes."""
+    def test_apply_business_filters_with_tipoinmueble_residencial(self):
+        """Test filtering with tipoinmueble instead of property_use_codes."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["residencial"],  # Should map to ['01', '02', '03']
+        search_input = SearchRequest(
+            tipoinmueble=["residencial"],  # Should map to ['01', '02', '03']
             min_area=0,
             max_area=0,
             min_age=0,
             max_age=2025,
             min_stratum=0,
             max_stratum=0,
-            property_use_codes=[],  # Empty, should use property_type
+            property_use_codes=[],  # Empty, should use tipoinmueble
             polygon="POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))"
         )
         
@@ -852,11 +852,11 @@ class TestPropertySearchService:
         assert result[0] == mock_char1
         self.mock_property_use_repository.get_property_use_codes_by_type.assert_called_once_with(["residencial"])
     
-    def test_apply_business_filters_with_property_type_todo(self):
-        """Test filtering with property_type 'todo' (should include all)."""
+    def test_apply_business_filters_with_tipoinmueble_todo(self):
+        """Test filtering with tipoinmueble 'todo' (should include all)."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["todo"],  # Should return empty list (include all)
+        search_input = SearchRequest(
+            tipoinmueble=["todo"],  # Should return empty list (include all)
             min_area=0,
             max_area=0,
             min_age=0,
@@ -898,8 +898,8 @@ class TestPropertySearchService:
     def test_apply_business_filters_with_property_use_codes_direct(self):
         """Test filtering with direct property_use_codes (should not call repository)."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=[],  # Empty
+        search_input = SearchRequest(
+            tipoinmueble=[],  # Empty
             min_area=0,
             max_area=0,
             min_age=0,
@@ -940,8 +940,8 @@ class TestPropertySearchService:
     def test_apply_business_filters_none_values(self):
         """Test filtering with None values."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=100,
             max_area=200,
             min_age=10,
@@ -971,8 +971,8 @@ class TestPropertySearchService:
     def test_apply_business_filters_empty_characteristics(self):
         """Test filtering with empty characteristics list."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=0,
@@ -1032,12 +1032,12 @@ class TestPropertySearchService:
         
         # Assert
         assert len(result) == 1
-        assert isinstance(result[0], PropertyResult)
-        assert result[0].barmanpre == "123"
-        assert result[0].preaconst == 100
-        assert result[0].estrato == 4
-        assert result[0].wkt == "POINT(0 0)"
-        assert result[0].prechip == "CHIP123"
+        assert isinstance(result[0], PropertyResponse)
+        assert result[0].id == 123
+        assert result[0].area == 100
+        assert result[0].characteristics['estrato'] == 4
+        assert result[0].geometry == {"wkt": "POINT(0 0)"}
+        assert result[0].characteristics['prechip'] == "CHIP123"
         assert result[0].predirecc == "Test Street 123"
     
     def test_transform_to_response_format_no_property_data(self):
@@ -1118,8 +1118,8 @@ class TestPropertySearchService:
     def test_create_search_meta(self):
         """Test search metadata creation."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["residencial"],
+        search_input = SearchRequest(
+            tipoinmueble=["residencial"],
             min_area=50,
             max_area=200,
             min_age=0,
@@ -1136,18 +1136,16 @@ class TestPropertySearchService:
         result = self.service._create_search_meta(search_input, total_results, execution_time_ms)
         
         # Assert
-        assert isinstance(result, SearchMeta)
-        assert result.total_results == 10
-        assert result.execution_time_ms == 150.5
-        assert result.filters_applied["property_type"] == ["residencial"]
-        assert result.filters_applied["min_area"] == 50
-        assert result.filters_applied["max_area"] == 200
+        assert isinstance(result, SearchResponse)
+        assert result.total == 10
+        assert result.success is True
+        assert result.message == "Found 10 properties"
     
     def test_create_empty_response(self):
         """Test empty response creation."""
         # Arrange
-        search_input = GeneralSearchInput(
-            property_type=["All"],
+        search_input = SearchRequest(
+            tipoinmueble=["All"],
             min_area=0,
             max_area=0,
             min_age=0,
@@ -1163,9 +1161,9 @@ class TestPropertySearchService:
         result = self.service._create_empty_response(search_input, start_time)
         
         # Assert
-        assert isinstance(result, GeneralSearchResponse)
+        assert isinstance(result, SearchResponse)
         assert len(result.data) == 0
-        assert result.meta.total_results == 0
+        assert result.total == 0
     
     def test_validate_polygon_valid(self):
         """Test polygon validation with valid input."""
@@ -1213,7 +1211,7 @@ class TestSearchEndpoints:
         """Test successful general search endpoint."""
         # Arrange
         search_data = {
-            "property_type": ["residencial"],
+            "tipoinmueble": ["residencial"],
             "min_area": 50.0,
             "max_area": 200.0,
             "min_age": 0,
@@ -1227,15 +1225,14 @@ class TestSearchEndpoints:
         # Mock the search service
         with patch('app.api.v1.endpoints.search.PropertySearchService') as mock_service_class:
             mock_service = Mock()
-            mock_service.search_properties.return_value = GeneralSearchResponse(
-                meta=SearchMeta(
-                    total_results=1,
-                    execution_time_ms=100.0,
-                    request_id="test-id",
-                    filters_applied={},
-                    timestamp="2024-01-15T10:30:00.000Z"
-                ),
-                data=[]
+            mock_service.search_properties.return_value = SearchResponse(
+                success=True,
+                message="Found 1 property",
+                data=[],
+                total=1,
+                limit=100,
+                offset=0,
+                request_id="test-123"
             )
             mock_service_class.return_value = mock_service
             
@@ -1252,7 +1249,7 @@ class TestSearchEndpoints:
         """Test general search with invalid input."""
         # Arrange
         search_data = {
-            "property_type": ["residencial"],
+            "tipoinmueble": ["residencial"],
             "min_area": -50.0,  # Invalid negative area
             "polygon": "invalid"  # Invalid polygon
         }
@@ -1267,7 +1264,7 @@ class TestSearchEndpoints:
         """Test general search with exception handling."""
         # Arrange
         search_data = {
-            "property_type": ["residencial"],
+            "tipoinmueble": ["residencial"],
             "min_area": 50.0,
             "max_area": 200.0,
             "min_age": 0,
@@ -1296,7 +1293,7 @@ class TestSearchEndpoints:
         """Test general search with missing required fields."""
         # Arrange
         search_data = {
-            "property_type": ["residencial"]
+            "tipoinmueble": ["residencial"]
             # Missing polygon and other required fields
         }
         
@@ -1310,7 +1307,7 @@ class TestSearchEndpoints:
         """Test general search with invalid polygon format."""
         # Arrange
         search_data = {
-            "property_type": ["residencial"],
+            "tipoinmueble": ["residencial"],
             "min_area": 50.0,
             "max_area": 200.0,
             "min_age": 0,
