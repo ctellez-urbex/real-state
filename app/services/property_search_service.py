@@ -112,7 +112,7 @@ class PropertySearchService:
         
         for char in characteristics:
             # Property type filter
-            if property_use_codes and char.precuso not in property_use_codes:
+            if property_use_codes and hasattr(char, 'precuso') and char.precuso and char.precuso not in property_use_codes:
                 continue
             
             # Area filters

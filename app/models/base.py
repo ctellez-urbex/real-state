@@ -7,8 +7,7 @@ This module contains the base SQLAlchemy model with common fields and methods.
 from datetime import datetime
 from typing import Any, Dict
 from sqlalchemy import Column, DateTime, Integer, String, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import declared_attr
+from sqlalchemy.orm import declarative_base, declared_attr
 
 
 class CustomBase:
