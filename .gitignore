@@ -98,99 +98,100 @@ celerybeat.pid
 
 # Environments
 .env
-.envrc
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
-.venv/
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.development
-.env.test
-.env.production
-.env.backup
-.env.backup.local
-.env.backup.development
-.env.backup.test
-.env.backup.production
 
-# scripts
-scripts/
-
-# config import database
-alembic/
-alembic.ini
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
 
 # Serverless
 .serverless/
-node_modules/
+.requirements/
+.python_packages/
 
-# Docker
-.dockerignore
+# AWS
+.aws/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Rope project settings
-.ropeproject
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# mkdocs documentation
-/site
+# Logs
+logs
+*.log
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# Pyre type checker
-.pyre/
+# Coverage directory used by tools like istanbul
+coverage/
 
-# pytype static type analyzer
-.pytype/
+# nyc test coverage
+.nyc_output
 
-# Cython debug symbols
-cython_debug/
+# Dependency directories
+jspm_packages/
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+# Optional npm cache directory
+.npm
 
-# Abstra
-# Abstra is an AI-powered process automation framework.
-# Ignore directories containing user credentials, local state, and settings.
-# Learn more at https://abstra.io/docs
-.abstra/
+# Optional REPL history
+.node_repl_history
 
-# Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
-#  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
-#  you could uncomment the following to ignore the entire vscode folder
-# .vscode/
+# Output of 'npm pack'
+*.tgz
 
-# Ruff stuff:
-.ruff_cache/
+# Yarn Integrity file
+.yarn-integrity
 
-# PyPI configuration file
-.pypirc
+# dotenv environment variables file
+.env.test
 
-# Cursor
-#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
-#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
-#  refer to https://docs.cursor.com/context/ignore-files
-.cursorignore
-.cursorindexingignore
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
 
-# Marimo
-marimo/_static/
-marimo/_lsp/
-__marimo__/
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
