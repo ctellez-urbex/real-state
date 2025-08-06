@@ -1,0 +1,239 @@
+service: real-state-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.12
+  region: us-east-2
+  stage: ${opt:stage, 'prod'}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    ENVIRONMENT: ${self:provider.stage}
+    AWS_REGION: ${self:provider.region}
+  
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: 
+            - "arn:aws:secretsmanager:${self:provider.region}:*:secret:real-state/*"
+        - Effect: Allow
+          Action:
+            - rds-db:connect
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+plugins:
+  - serverless-python-requirements
+  - serverless-wsgi
+
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
+    layer:
+      name: python-deps
+      description: Python dependencies for real-state-api
+    noDeploy:
+      - coverage
+      - pytest
+      - pytest-cov
+  wsgi:
+    app: app.main.app
+    packRequirements: false
+
+functions:
+  # Main API function - handles all FastAPI routes including /api/v1/search/general
+  api:
+    handler: wsgi_handler.handler
+    events:
+      # This captures ALL routes including /api/v1/search/general
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+          authorizer:
+            name: apiKeyAuthorizer
+            type: apiKey
+            identitySource: $request.header.Authorization
+            resultTtlInSeconds: 300
+      # Explicit route for root
+      - httpApi:
+          path: /
+          method: GET
+          authorizer:
+            name: apiKeyAuthorizer
+            type: apiKey
+            identitySource: $request.header.Authorization
+            resultTtlInSeconds: 300
+      # Explicit route for API docs (if enabled)
+      - httpApi:
+          path: /docs
+          method: GET
+          authorizer:
+            name: apiKeyAuthorizer
+            type: apiKey
+            identitySource: $request.header.Authorization
+            resultTtlInSeconds: 300
+    environment:
+      # Use environment variables that will be set from GitHub secrets
+      DATABASE_URL: ${env:DATABASE_URL}
+      API_KEYS: ${env:API_KEYS}
+      ALLOWED_HOSTS: ${env:ALLOWED_HOSTS}
+      ALLOWED_ORIGINS: ${env:ALLOWED_ORIGINS}
+    timeout: 30
+    memorySize: 512
+    reservedConcurrency: 10
+
+  # Health check function (no auth required)
+  health:
+    handler: app.api.v1.endpoints.health.handler
+    events:
+      - httpApi:
+          path: /health
+          method: GET
+    environment:
+      ENVIRONMENT: ${self:provider.stage}
+    timeout: 10
+    memorySize: 128
+
+resources:
+  Resources:
+    # API Gateway Usage Plan
+    ApiGatewayUsagePlan:
+      Type: AWS::ApiGateway::UsagePlan
+      Properties:
+        UsagePlanName: ${self:service}-${self:provider.stage}-usage-plan
+        Description: Usage plan for Real State Search API
+        ApiStages:
+          - ApiId: !Ref HttpApi
+            Stage: $default
+        Throttle:
+          RateLimit: 1000
+          BurstLimit: 2000
+        Quota:
+          Limit: 100000
+          Period: MONTH
+
+    # API Key - Let API Gateway generate it automatically
+    ApiGatewayApiKey:
+      Type: AWS::ApiGateway::ApiKey
+      Properties:
+        Name: ${self:service}-${self:provider.stage}-api-key
+        Description: API Key for Real State Search API
+        Enabled: true
+        UsagePlanIds:
+          - !Ref ApiGatewayUsagePlan
+
+    # Authorizer
+    ApiKeyAuthorizer:
+      Type: AWS::ApiGatewayV2::Authorizer
+      Properties:
+        ApiId: !Ref HttpApi
+        AuthorizerType: REQUEST
+        Name: apiKeyAuthorizer
+        AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiKeyAuthorizerFunction.Arn}/invocations"
+        AuthorizerPayloadFormatVersion: "2.0"
+        EnableSimpleResponses: true
+
+    # Lambda function for API Key authorization
+    ApiKeyAuthorizerFunction:
+      Type: AWS::Lambda::Function
+      Properties:
+        FunctionName: ${self:service}-${self:provider.stage}-api-key-authorizer
+        Runtime: python3.12
+        Handler: authorizer.handler
+        Code:
+          ZipFile: |
+            import json
+            import os
+            
+            def handler(event, context):
+                # Get the Authorization header
+                auth_header = event.get('headers', {}).get('authorization', '')
+                
+                # Check if it's a Bearer token
+                if not auth_header.startswith('Bearer '):
+                    return generate_policy('user', 'Deny', event['methodArn'])
+                
+                # Extract the token
+                token = auth_header.replace('Bearer ', '')
+                
+                # Get API keys from environment
+                api_keys = os.environ.get('API_KEYS', '[]')
+                try:
+                    import json
+                    valid_keys = json.loads(api_keys)
+                except:
+                    valid_keys = []
+                
+                # Validate the token
+                if token in valid_keys:
+                    return generate_policy('user', 'Allow', event['methodArn'])
+                else:
+                    return generate_policy('user', 'Deny', event['methodArn'])
+            
+            def generate_policy(principal_id, effect, resource):
+                return {
+                    'principalId': principal_id,
+                    'policyDocument': {
+                        'Version': '2012-10-17',
+                        'Statement': [{
+                            'Action': 'execute-api:Invoke',
+                            'Effect': effect,
+                            'Resource': resource
+                        }]
+                    }
+                }
+        Environment:
+          Variables:
+            API_KEYS: ${env:API_KEYS}
+        Timeout: 10
+        MemorySize: 128
+
+    # Permission for API Gateway to invoke the authorizer
+    ApiKeyAuthorizerPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !Ref ApiKeyAuthorizerFunction
+        Action: lambda:InvokeFunction
+        Principal: apigateway.amazonaws.com
+        SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*"
+
+  Outputs:
+    HttpApiId:
+      Description: ID of the HTTP API
+      Value: !Ref HttpApi
+      Export:
+        Name: ${self:service}-${self:provider.stage}-http-api-id
+
+    ApiKey:
+      Description: API Key for authentication (generated by API Gateway)
+      Value: !Ref ApiGatewayApiKey
+      Export:
+        Name: ${self:service}-${self:provider.stage}-api-key
+
+    ApiKeyAuthorizerFunctionArn:
+      Description: ARN of the API Key Authorizer function
+      Value: !GetAtt ApiKeyAuthorizerFunction.Arn
+      Export:
+        Name: ${self:service}-${self:provider.stage}-authorizer-arn
+
+    ServiceEndpoint:
+      Description: URL of the service endpoint
+      Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+      Export:
+        Name: ${self:service}-${self:provider.stage}-endpoint
+
+    SearchEndpoint:
+      Description: URL of the search endpoint
+      Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/api/v1/search/general"
+      Export:
+        Name: ${self:service}-${self:provider.stage}-search-endpoint 

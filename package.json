@@ -1,0 +1,33 @@
+{
+  "name": "real-estate-api",
+  "version": "1.0.0",
+  "description": "Real Estate API - Serverless deployment configuration",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "deploy:prod": "serverless deploy --stage prod",
+    "deploy:staging": "serverless deploy --stage staging",
+    "remove": "serverless remove",
+    "logs": "serverless logs -f api",
+    "info": "serverless info",
+    "package": "serverless package"
+  },
+  "keywords": [
+    "fastapi",
+    "serverless",
+    "aws",
+    "lambda",
+    "real-estate",
+    "api"
+  ],
+  "author": "Real Estate API Team",
+  "license": "MIT",
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-python-requirements": "^6.1.2",
+    "serverless-wsgi": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

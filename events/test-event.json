@@ -1,0 +1,45 @@
+{
+  "httpMethod": "POST",
+  "path": "/api/v1/search/general",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer test-api-key",
+    "User-Agent": "curl/7.68.0",
+    "Accept": "*/*"
+  },
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "stageVariables": null,
+  "requestContext": {
+    "resourceId": "test",
+    "resourcePath": "/api/v1/search/general",
+    "httpMethod": "POST",
+    "extendedRequestId": "test",
+    "requestTime": "05/Aug/2025:22:50:00 +0000",
+    "path": "/api/v1/search/general",
+    "accountId": "123456789012",
+    "protocol": "HTTP/1.1",
+    "stage": "dev",
+    "domainPrefix": "test",
+    "requestTimeEpoch": 1628196600000,
+    "requestId": "test-request-id",
+    "identity": {
+      "cognitoIdentityPoolId": null,
+      "accountId": null,
+      "cognitoIdentityId": null,
+      "caller": null,
+      "sourceIp": "127.0.0.1",
+      "principalOrgId": null,
+      "accessKey": null,
+      "cognitoAuthenticationType": null,
+      "cognitoAuthenticationProvider": null,
+      "userArn": null,
+      "userAgent": "curl/7.68.0",
+      "user": null
+    },
+    "domainName": "test.execute-api.us-east-2.amazonaws.com",
+    "apiId": "test-api-id"
+  },
+  "body": "{\"polygon\":\"POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))\",\"property_type\":[\"residencial\"],\"min_area\":50,\"max_area\":200,\"min_age\":0,\"max_age\":20,\"min_stratum\":3,\"max_stratum\":5,\"property_use_codes\":[],\"polygon\":\"POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))\"}",
+  "isBase64Encoded": false
+} 
