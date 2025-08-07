@@ -1,153 +1,110 @@
 """Main FastAPI application with security, logging, and middleware."""
 
-import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.core.logging import setup_logging, get_logger
-from app.core.middleware import setup_middleware
-from app.api.v1.api import api_router
+from typing import Any
 
-# Setup logging
-setup_logging()
-logger = get_logger(__name__)
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from mangum import Mangum
+
+from app.api.v1.endpoints import search
+from app.core.config import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager.
-    
-    Args:
-        app: FastAPI application instance
-    """
+    """Application lifespan manager."""
     # Startup
-    logger.info("Starting Real Estate API", version=settings.VERSION, environment=settings.ENVIRONMENT)
-    
+    print("Starting Urbex API...")
     yield
-    
     # Shutdown
-    logger.info("Shutting down Real Estate API")
+    print("Shutting down Urbex API...")
 
 
 # Create FastAPI application
-app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.VERSION,
-    description="Real Estate API with advanced security and performance features",
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
-    openapi_url="/openapi.json" if settings.DEBUG else None,
-    lifespan=lifespan,
-)
-
-# Setup middleware
-setup_middleware(app)
-
-# Include API router
-app.include_router(api_router, prefix="/api/v1")
-
-
-@app.get("/", tags=["root"])
-async def root():
-    """Root endpoint with application information.
-    
-    Returns:
-        Application information
-    """
-    return {
-        "app_name": settings.APP_NAME,
-        "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT,
-        "status": "active",
-        "timestamp": time.time(),
-    }
-
-
-@app.get("/health", tags=["health"])
-async def health_check():
-    """Health check endpoint.
-    
-    Returns:
-        Health status information
-    """
-    return {
-        "status": "healthy",
-        "timestamp": time.time(),
-        "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT,
-    }
-
-
-@app.get("/info", tags=["info"])
-async def info():
-    """Application information endpoint.
-    
-    Returns:
-        Detailed application information
-    """
-    return {
-        "app_name": settings.APP_NAME,
-        "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT,
-        "debug": settings.DEBUG,
-        "features": {
-            "api_key_auth": True,
-            "rate_limiting": True,
-            "security_headers": True,
-            "structured_logging": True,
-            "performance_monitoring": True,
-        },
-        "endpoints": {
-            "docs": "/docs" if settings.DEBUG else "disabled",
-            "redoc": "/redoc" if settings.DEBUG else "disabled",
-            "openapi": "/openapi.json" if settings.DEBUG else "disabled",
-        },
-    }
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler.
-    
-    Args:
-        request: Request that caused the exception
-        exc: Exception that occurred
-        
-    Returns:
-        Error response
-    """
-    request_id = getattr(request.state, "request_id", "unknown")
-    
-    logger.error(
-        "Unhandled exception",
-        request_id=request_id,
-        path=str(request.url.path),
-        method=request.method,
-        error_type=type(exc).__name__,
-        error_message=str(exc),
+def create_app() -> FastAPI:
+    """Create FastAPI application."""
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        description="Real Estate API with advanced security and performance features",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        lifespan=lifespan,
     )
-    
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": "Internal server error",
-            "request_id": request_id,
-            "message": "An unexpected error occurred",
-            "timestamp": time.time(),
-        },
-        headers={"X-Request-ID": request_id},
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins,
+        allow_credentials=True,
+        allow_methods=settings.allowed_methods,
+        allow_headers=settings.allowed_headers,
     )
 
 
-if __name__ == "__main__":
-    import uvicorn
-    
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.DEBUG,
-        log_level=settings.LOG_LEVEL.lower(),
-    ) 
+    # Add no-cache middleware
+    @app.middleware("http")
+    async def add_no_cache_headers(request: Request, call_next):
+        """Add headers to prevent caching."""
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
+    # Global exception handler
+    @app.exception_handler(Exception)
+    async def global_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        """Global exception handler."""
+        print(f"❌ Global exception handler caught: {exc}")
+        print(f"❌ Exception type: {type(exc).__name__}")
+        import traceback
+
+        print(f"❌ Traceback: {traceback.format_exc()}")
+
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": "Internal server error",
+                "detail": str(exc)
+                if settings.debug
+                else "An unexpected error occurred",
+            },
+        )
+
+    # Include API routes
+    app.include_router(search.router, prefix="/api/v1/search")
+
+    # Health check endpoint
+    @app.get("/health")
+    async def health_check() -> dict[str, Any]:
+        """Health check endpoint."""
+        return {
+            "status": "healthy",
+            "service": settings.app_name,
+            "version": settings.app_version,
+        }
+
+    # Root endpoint
+    @app.get("/")
+    async def root() -> dict[str, Any]:
+        """Root endpoint."""
+        return {
+            "message": f"Welcome to {settings.app_name}",
+            "version": settings.app_version,
+            "docs": "/docs" if settings.debug else None,
+        }
+
+    return app
+
+
+# Create the application instance
+app = create_app()
+
+# Create Mangum handler for AWS Lambda
+handler = Mangum(app, lifespan="off")

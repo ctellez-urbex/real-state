@@ -7,45 +7,21 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/real_estate_db
-      - ENVIRONMENT=development
-      - SECRET_KEY=dev-secret-key-change-in-production
+      - DEBUG=true
+      - AWS_REGION=us-east-2
+      - DATABASE_URL=${DATABASE_URL}
+      - VPC_SECURITY_GROUP_ID=${VPC_SECURITY_GROUP_ID}
+      - VPC_SUBNET_ID_1=${VPC_SUBNET_ID_1}
+      - VPC_SUBNET_ID_2=${VPC_SUBNET_ID_2}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
     volumes:
       - .:/app
     depends_on:
       - db
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    networks:
-      - real-estate-network
-
-  # PostgreSQL Database
-  db:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=real_estate_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - real-estate-network
-
-  # Redis for caching (optional)
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - real-estate-network
-
-volumes:
-  postgres_data:
-  redis_data:
-
-networks:
-  real-estate-network:
-    driver: bridge 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

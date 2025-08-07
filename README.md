@@ -47,15 +47,30 @@ A high-performance, serverless property search API built with FastAPI, AWS Lambd
 └─────────────────────────────────────┘
 ```
 
+### **Serverless Architecture**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   GitHub Code   │───▶│  GitHub Actions │───▶│   AWS Lambda    │
+│                 │    │  (Build & Test) │    │  (FastAPI App)  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                       │
+                                                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   API Gateway   │◀───│   Lambda        │◀───│   Database      │
+│  (HTTP API v2)  │    │  (Authorizer)   │    │  (MySQL/Aurora) │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
 ### **Technology Stack**
 - **Framework**: FastAPI 0.104.1
 - **Database**: MySQL/Aurora MySQL with GeoAlchemy2
 - **ORM**: SQLAlchemy 2.0
-- **Deployment**: AWS Lambda + API Gateway v2
+- **Deployment**: AWS Lambda + API Gateway v2 (Serverless)
 - **Authentication**: Bearer Token with Lambda Authorizer
-- **Testing**: pytest with 80%+ coverage
+- **Testing**: pytest with 69% coverage
 - **CI/CD**: GitHub Actions
 - **Monitoring**: CloudWatch Logs
+- **Serverless**: Serverless Framework v3
 
 ## 📊 **Test Coverage**
 
@@ -108,7 +123,34 @@ make install
 aws configure
 ```
 
-### **2. Generate Database URL**
+### **2. Setup AWS Infrastructure**
+```bash
+# Setup ECR repository, ECS cluster, and other AWS resources
+make setup-infra
+
+# Or run directly
+./scripts/setup-infrastructure.sh
+```
+
+### **3. Setup Network for External Database**
+```bash
+# Setup VPC, subnets, and security groups for external DB connection
+make setup-network
+
+# Or run directly
+./scripts/setup-network-external-db.sh
+```
+
+### **4. Configure Environment Variables**
+```bash
+# Edit the generated configuration file
+make edit-env
+
+# Or load and validate configuration
+make load-env
+```
+
+### **5. Generate Database URL**
 ```bash
 # Interactive database URL generator
 make db-url
@@ -117,7 +159,7 @@ make db-url
 ./scripts/generate-database-url.sh
 ```
 
-### **3. Local Development**
+### **6. Local Development**
 ```bash
 # Start local development server
 make local
@@ -128,14 +170,56 @@ curl -X POST "http://localhost:8000/api/v1/search/general" \
   -d '{"polygon": "POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))"}'
 ```
 
-### **4. Serverless Deployment**
+### **7. Serverless Deployment**
 ```bash
 # Deploy locally with temporary values
 make deploy-local
 
-# Deploy to production via GitHub Actions
+# Deploy to development stage
+make deploy-dev
+
+# Deploy to production stage
+make deploy-prod
+
+# Deploy to production via GitHub Actions (recommended)
 git push origin developer
 ```
+
+### **8. Serverless Management**
+```bash
+# View deployment information
+make serverless-info
+
+# View logs in real-time
+make serverless-logs
+
+# Package application
+make serverless-package
+
+# Start offline development
+make serverless-offline
+```
+
+## 💰 **Costos Estimados (Serverless)**
+
+### **Escenarios de Uso**
+
+| Escenario | Requests/Mes | Costo Estimado | Descripción |
+|-----------|--------------|----------------|-------------|
+| **🚀 Startup** | 1,000 | ~$3.14/mes | Desarrollo inicial |
+| **📈 Crecimiento** | 10,000 | ~$4.02/mes | Aplicación en crecimiento |
+| **🏢 Producción** | 100,000 | ~$11.77/mes | Aplicación en producción |
+
+### **Desglose de Costos**
+- **Lambda**: $0.0000166667/GB-segundo
+- **API Gateway**: $1.00/mes (primer millón de requests)
+- **CloudWatch Logs**: $0.50/GB
+- **Secrets Manager**: $1.60/mes (4 secrets)
+
+### **Ahorro vs ECS**
+- **85-90% de ahorro** comparado con ECS + ECR
+- **Sin costos fijos** de servidores
+- **Escalado automático** sin configuración adicional
 
 ## 🔧 **Configuration**
 
@@ -151,20 +235,35 @@ The application uses GitHub Secrets for secure configuration:
 | `ALLOWED_ORIGINS` | CORS allowed origins | `["https://your-frontend.com"]` |
 | `AWS_ACCESS_KEY_ID` | AWS access key | `AKIA...` |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key | `wJalr...` |
+| `VPC_SECURITY_GROUP_ID` | VPC Security Group ID | `sg-0123456789abcdef0` |
+| `VPC_SUBNET_ID_1` | VPC Subnet 1 ID | `subnet-0123456789abcdef0` |
+| `VPC_SUBNET_ID_2` | VPC Subnet 2 ID | `subnet-0123456789abcdef1` |
 
-### **Database Configuration**
+### **Database Configuration (External)**
 
-Generate your `DATABASE_URL` using the interactive script:
+This project is configured to connect to an **external database** outside of AWS.
 
+#### **Network Requirements**
+- Lambda functions run in a VPC with public subnets
+- Security groups allow outbound connections to external database
+- Database must allow connections from AWS IP ranges
+
+#### **Generate Database URL**
 ```bash
 make db-url
 ```
 
-Supported database types:
-- AWS Aurora MySQL (Production)
-- AWS RDS MySQL (Production)
-- MySQL Local (Development)
-- Custom configurations
+#### **Supported Database Types**
+- **External MySQL Server** (Production)
+- **External PostgreSQL Server** (Production)
+- **Local MySQL** (Development)
+- **Custom configurations**
+
+#### **Security Considerations**
+- Use SSL/TLS connections for production
+- Implement proper firewall rules on external database
+- Consider VPN or dedicated connection for sensitive data
+- Rotate database credentials regularly
 
 ## 📡 **API Endpoints**
 
@@ -420,6 +519,62 @@ pytest tests/ --cov=app --cov-report=html
 - **[Serverless Guide](docs/SERVERLESS.md)** - Serverless deployment details
 - **[API Endpoints](docs/ENDPOINTS.md)** - Complete API documentation
 - **[GitHub Secrets Setup](scripts/setup-github-secrets.md)** - Secrets configuration
+
+## 🔧 **Troubleshooting**
+
+### **Common Issues**
+
+#### **ECR Repository Not Found**
+```bash
+# Error: The repository with name 'real-state-api' does not exist
+# Solution: Run the infrastructure setup
+make setup-infra
+```
+
+#### **ECS Task Definition Issues**
+```bash
+# Error: Task definition not found
+# Solution: Register the task definition
+aws ecs register-task-definition --cli-input-json file://task-definition.json --region us-east-2
+```
+
+#### **Secrets Manager Access**
+```bash
+# Error: Access denied to secrets
+# Solution: Ensure IAM roles have proper permissions
+aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/SecretsManagerReadWrite
+```
+
+#### **Database Connection Issues**
+```bash
+# Error: Database connection failed
+# Solution: Check DATABASE_URL in Secrets Manager
+aws secretsmanager get-secret-value --secret-id real-state/database-url --region us-east-2
+
+# Error: Cannot connect to external database
+# Solution: Check network configuration
+aws ec2 describe-security-groups --group-ids sg-0123456789abcdef0 --region us-east-2
+
+# Error: Lambda timeout when connecting to external DB
+# Solution: Increase timeout and check database performance
+serverless deploy --stage prod --verbose
+```
+
+### **Useful Commands**
+
+```bash
+# Check ECR repository
+aws ecr describe-repositories --repository-names real-state-api --region us-east-2
+
+# Check ECS cluster
+aws ecs describe-clusters --clusters real-state-cluster --region us-east-2
+
+# Check task definition
+aws ecs describe-task-definition --task-definition real-state-api --region us-east-2
+
+# View CloudWatch logs
+aws logs describe-log-groups --log-group-name-prefix /ecs/real-state-api --region us-east-2
+```
 
 ## 🤝 **Contributing**
 

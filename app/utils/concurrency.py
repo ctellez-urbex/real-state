@@ -3,11 +3,9 @@
 import asyncio
 import concurrent.futures
 import threading
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 from functools import wraps
-import time
 from dataclasses import dataclass
-from enum import Enum
 from app.core.logging import get_logger, LoggerMixin
 from app.core.patterns import RetryDecorator, CircuitBreaker
 

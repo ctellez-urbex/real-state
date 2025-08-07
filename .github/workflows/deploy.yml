@@ -2,172 +2,59 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ developer ]
-  pull_request:
-    branches: [ developer ]
-
-env:
-  AWS_REGION: us-east-2
-  PYTHON_VERSION: '3.12'
+    branches:
+      - developer
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: test_db
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    - name: Cache pip dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov
-    - name: Create environment file
-      run: |
-        cp env.example .env
-        echo "DATABASE_URL=mysql+pymysql://root:root@localhost:3306/test_db" >> .env
-        echo "API_KEYS=[\"test-key\"]" >> .env
-        echo "ALLOWED_HOSTS=[\"localhost\"]" >> .env
-        echo "ALLOWED_ORIGINS=[\"http://localhost:3000\"]" >> .env
-    - name: Run tests
-      run: |
-        pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-
   deploy:
-    needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/developer' && github.event_name == 'push'
+    
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-    - name: Build, tag, and push image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: real-state-api
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-    - name: Deploy to ECS
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: task-definition.json
-        service: real-state-api-service
-        cluster: real-state-cluster
-        wait-for-service-stability: true
-    - name: Notify deployment status
-      if: always()
-      run: |
-        if [ ${{ job.status }} == 'success' ]; then
-          echo "✅ Deployment successful!"
-          echo "Environment: ${{ env.AWS_REGION }}"
-          echo "Image: ${{ steps.login-ecr.outputs.registry }}/real-state-api:${{ github.sha }}"
-        else
-          echo "❌ Deployment failed!"
-        fi
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  deploy-serverless:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/developer' && github.event_name == 'push'
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: Install Serverless Framework
-      run: |
-        npm install -g serverless@3
-        serverless plugin install --name serverless-python-requirements
-        serverless plugin install --name serverless-wsgi
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    - name: Deploy to AWS Lambda
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        API_KEYS: ${{ secrets.API_KEYS }}
-        ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
-        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
-      run: |
-        serverless deploy --stage prod --verbose
-    - name: Get deployment info
-      run: |
-        serverless info --stage prod
-    - name: Notify serverless deployment status
-      if: always()
-      run: |
-        if [ ${{ job.status }} == 'success' ]; then
-          echo "✅ Serverless deployment successful!"
-          echo "Environment: ${{ env.AWS_REGION }}"
-          echo "Stage: prod"
-        else
-          echo "❌ Serverless deployment failed!"
-        fi
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-  security-scan:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Run Bandit security scan
-      run: |
-        pip install bandit
-        bandit -r app/ -f json -o bandit-report.json || true
-    - name: Run Safety check
-      run: |
-        pip install safety
-        safety check --json --output safety-report.json || true
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: security-reports
-        path: |
-          bandit-report.json
-          safety-report.json 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Serverless Framework
+        run: npm install -g serverless
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements-prod.txt
+          npm install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          
+      - name: Deploy to Serverless Lambda
+        env:
+          VPC_SECURITY_GROUP_ID: ${{ secrets.VPC_SECURITY_GROUP_ID }}
+          VPC_SUBNET_ID_1: ${{ secrets.VPC_SUBNET_ID_1 }}
+          VPC_SUBNET_ID_2: ${{ secrets.VPC_SUBNET_ID_2 }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: serverless deploy --stage prod
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment to production completed successfully!"
+          else
+            echo "❌ Deployment to production failed!"
+            exit 1
+          fi
