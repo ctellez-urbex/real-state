@@ -16,7 +16,7 @@ from app.main import app
 def client() -> TestClient:
     """
     Create a test client for the FastAPI application.
-    
+
     Returns:
         TestClient: Test client instance
     """
@@ -27,7 +27,7 @@ def client() -> TestClient:
 async def async_client() -> AsyncClient:
     """
     Create an async test client for the FastAPI application.
-    
+
     Returns:
         AsyncClient: Async test client instance
     """
@@ -39,7 +39,7 @@ async def async_client() -> AsyncClient:
 def mock_user() -> dict:
     """
     Create a mock user for testing.
-    
+
     Returns:
         dict: Mock user data
     """
@@ -55,7 +55,7 @@ def mock_user() -> dict:
 def mock_property() -> dict:
     """
     Create a mock property for testing.
-    
+
     Returns:
         dict: Mock property data
     """
@@ -74,4 +74,4 @@ def mock_property() -> dict:
         "zip_code": "12345",
         "is_available": True,
         "owner_id": 1,
-    } 
+    }

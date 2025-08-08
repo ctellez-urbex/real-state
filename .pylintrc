@@ -1,0 +1,43 @@
+[MASTER]
+# Use multiple processes to speed up Pylint
+jobs=0
+
+[MESSAGES CONTROL]
+# Disable specific warnings for SQLAlchemy patterns
+disable=
+    no-self-argument,  # For @declared_attr methods
+    too-few-public-methods,  # For SQLAlchemy models
+    missing-class-docstring,  # For simple models
+    missing-module-docstring,  # For __init__.py files
+    no-member,  # For SQLAlchemy dynamic attributes
+    trailing-whitespace,  # Allow trailing whitespace
+    missing-final-newline  # Allow missing final newline
+
+[REPORTS]
+# Set the output format
+output-format=text
+
+# Include a brief explanation of the error
+msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}
+
+[BASIC]
+# Regular expression which should only match function or class names
+good-names=i,j,k,ex,Run,_,id,cls
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=120
+
+# Maximum number of lines in a module
+max-module-lines=1000
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=4
+
+# Ignore imports when computing similarities
+ignore-imports=yes
+
+[MISCELLANEOUS]
+# List of note tags to take into consideration
+notes=

@@ -166,4 +166,4 @@ When modifying workflows:
 2. Update documentation
 3. Follow the existing patterns
 4. Add appropriate comments
-5. Test all scenarios 
+5. Test all scenarios

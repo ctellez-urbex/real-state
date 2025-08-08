@@ -5,4 +5,4 @@ This package contains the main FastAPI application for the real estate managemen
 """
 
 __version__ = "1.0.0"
-__author__ = "Real Estate API Team" 
+__author__ = "Real Estate API Team"

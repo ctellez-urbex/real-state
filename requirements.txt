@@ -1,26 +1,26 @@
+# Core FastAPI dependencies (minimal)
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
+uvicorn==0.24.0
+
+# Database dependencies (minimal)
 sqlalchemy==2.0.23
 pymysql==1.1.0
-mysql-connector-python==8.2.0
 geoalchemy2==0.14.2
+
+# Data validation (minimal)
 pydantic==2.5.0
 pydantic-settings==2.1.0
+pydantic-core==2.14.1
+
+# HTTP and multipart (minimal)
 python-multipart==0.0.6
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-dotenv==1.0.0
-alembic==1.12.1
+
+# Logging (minimal)
 structlog==23.2.0
-python-json-logger==2.0.7
+python-json-logger==3.3.0
+
+# Resilience (minimal)
 tenacity==8.2.3
-pytest==7.4.3
-pytest-cov==4.1.0
-pytest-asyncio==0.21.1
-httpx==0.25.2
-# Security tools
-bandit==1.7.5
-safety==2.3.5
-# Serverless dependencies
+
+# Serverless dependencies (minimal)
 mangum==0.17.0
-serverless-wsgi==3.0.0 

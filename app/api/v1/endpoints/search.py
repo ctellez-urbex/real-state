@@ -2,12 +2,13 @@
 Search Endpoints - Clean Architecture
 Proper separation of concerns with clean dependency injection.
 """
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
 from app.core.logging import get_logger
-from app.services.property_search_service import PropertySearchService
 from app.schemas.search import SearchRequest, SearchResponse
+from app.services.property_search_service import PropertySearchService
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -22,11 +23,11 @@ def get_search_service(db: Session = Depends(get_db)) -> PropertySearchService:
 async def general_search(
     search_input: SearchRequest,
     background_tasks: BackgroundTasks,
-    search_service: PropertySearchService = Depends(get_search_service)
+    search_service: PropertySearchService = Depends(get_search_service),
 ):
     """
     Property search endpoint with clean architecture.
-    
+
     Features:
     - Proper separation of concerns
     - Clean dependency injection
@@ -35,20 +36,24 @@ async def general_search(
     - Background task support for metrics
     """
     try:
-        logger.info(f"Received search request with polygon: {search_input.polygon[:50] if search_input.polygon else 'None'}...")
-        
+        logger.info(
+            f"Received search request with polygon: {search_input.polygon[:50] if search_input.polygon else 'None'}..."
+        )
+
         # Add background task for metrics collection
         background_tasks.add_task(_collect_search_metrics, search_input)
-        
+
         # Execute search using clean service
         result = search_service.search_properties(search_input)
-        
+
         logger.info(f"Search completed. Found {len(result.data)} properties")
         return result
-        
+
     except Exception as e:
         logger.error(f"Error in search: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred during the search")
+        raise HTTPException(
+            status_code=500, detail="An error occurred during the search"
+        )
 
 
 @router.get("/health")
@@ -57,13 +62,13 @@ async def health_check(db: Session = Depends(get_db)):
     try:
         # Test database connection
         db.execute("SELECT 1")
-        
+
         return {
             "status": "healthy",
             "service": "property-search",
             "timestamp": "2025-08-05T00:00:00.000000",
             "version": "1.0.0",
-            "architecture": "clean-layered"
+            "architecture": "clean-layered",
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -78,13 +83,13 @@ async def get_metrics():
         "metrics": {
             "total_searches": 0,  # TODO: Implement metrics collection
             "average_response_time": 0,
-            "success_rate": 100.0
+            "success_rate": 100.0,
         },
-        "timestamp": "2025-08-05T00:00:00.000000"
+        "timestamp": "2025-08-05T00:00:00.000000",
     }
 
 
 async def _collect_search_metrics(search_input: SearchRequest):
     """Background task to collect search metrics."""
     # TODO: Implement metrics collection
-    logger.info(f"Collecting metrics for search: {search_input.tipoinmueble}") 
+    logger.info(f"Collecting metrics for search: {search_input.tipoinmueble}")

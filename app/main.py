@@ -13,7 +13,7 @@ from app.core.config import settings
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     """Application lifespan manager."""
     # Startup
     print("Starting Urbex API...")
@@ -42,7 +42,6 @@ def create_app() -> FastAPI:
         allow_methods=settings.allowed_methods,
         allow_headers=settings.allowed_headers,
     )
-
 
     # Add no-cache middleware
     @app.middleware("http")

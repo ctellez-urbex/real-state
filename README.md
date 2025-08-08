@@ -17,16 +17,84 @@ A high-performance, serverless property search API built with FastAPI, AWS Lambd
 - ✅ **Repository Pattern** for data access abstraction
 - ✅ **Service Layer** for business logic
 - ✅ **Dependency Injection** for testability
-- ✅ **High Test Coverage** (80%+)
+- ✅ **High Test Coverage** (69%+)
 - ✅ **Performance Optimized** queries and caching
 
 ### **Deployment & Infrastructure**
-- ✅ **Serverless Deployment** with AWS Lambda
+- ✅ **Serverless Deployment** with AWS Lambda (Optimized)
 - ✅ **API Gateway v2** for HTTP API management
 - ✅ **Auto-scaling** based on demand
 - ✅ **Pay-per-use** pricing model
 - ✅ **GitHub Actions CI/CD** pipeline
 - ✅ **Security Best Practices** implementation
+- ✅ **Package Size Optimization** (Docker + Lambda Layers)
+
+### **Development Environment**
+- ✅ **Python 3.11** virtual environment
+- ✅ **Pylint Configuration** for code quality
+- ✅ **VS Code/Cursor** integration
+- ✅ **Automated dependency management**
+- ✅ **Code formatting and linting**
+
+## 🛠️ **Development Setup**
+
+### **1. Environment Setup**
+```bash
+# Clone the repository
+git clone <repository-url>
+cd real-state
+
+# Set up the development environment
+./scripts/activate-env.sh
+```
+
+### **2. IDE Configuration**
+For **VS Code/Cursor**:
+1. Press `Cmd+Shift+P` → "Python: Select Interpreter"
+2. Select: `./venv/bin/python`
+3. The IDE will automatically use the configured Pylint settings
+
+### **3. Code Quality**
+```bash
+# Run Pylint analysis
+./scripts/lint.sh
+
+# Activate virtual environment manually
+source venv/bin/activate
+```
+
+### **4. Environment Variables**
+```bash
+# Copy example environment file
+cp env.example .env
+
+# Edit with your configuration
+nano .env
+```
+
+### **5. Deployment**
+```bash
+# Deploy to production
+./scripts/deploy-production.sh
+
+# Or deploy manually
+source venv/bin/activate
+export $(cat .env | xargs)
+serverless deploy --stage prod
+```
+
+### **6. Testing**
+```bash
+# Test locally
+source venv/bin/activate
+uvicorn app.main:app --reload
+
+# Test production API
+curl -X POST "https://2inmopwwug.execute-api.us-east-2.amazonaws.com/prod/api/v1/search/general" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -d '{"polygon": [[-74.1, 4.6], [-74.0, 4.6], [-74.0, 4.7], [-74.1, 4.7], [-74.1, 4.6]]}'
+```
 
 ## 🏗️ **Architecture**
 
@@ -123,7 +191,22 @@ make install
 aws configure
 ```
 
-### **2. Setup AWS Infrastructure**
+### **2. Environment Setup**
+```bash
+# Copy environment template
+cp env.example .env
+
+# Edit .env with your configuration
+# DATABASE_URL=mysql+pymysql://user:password@host:port/database
+# VPC_SECURITY_GROUP_ID=sg-xxxxxxxxx
+# VPC_SUBNET_ID_1=subnet-xxxxxxxxx
+# VPC_SUBNET_ID_2=subnet-xxxxxxxxx
+
+# Load environment variables
+source ./scripts/setup-env.sh
+```
+
+### **3. Setup AWS Infrastructure**
 ```bash
 # Setup ECR repository, ECS cluster, and other AWS resources
 make setup-infra
@@ -132,7 +215,7 @@ make setup-infra
 ./scripts/setup-infrastructure.sh
 ```
 
-### **3. Setup Network for External Database**
+### **4. Setup Network for External Database**
 ```bash
 # Setup VPC, subnets, and security groups for external DB connection
 make setup-network
@@ -141,7 +224,7 @@ make setup-network
 ./scripts/setup-network-external-db.sh
 ```
 
-### **4. Configure Environment Variables**
+### **5. Configure Environment Variables**
 ```bash
 # Edit the generated configuration file
 make edit-env
@@ -150,7 +233,7 @@ make edit-env
 make load-env
 ```
 
-### **5. Generate Database URL**
+### **6. Generate Database URL**
 ```bash
 # Interactive database URL generator
 make db-url
@@ -159,7 +242,7 @@ make db-url
 ./scripts/generate-database-url.sh
 ```
 
-### **6. Local Development**
+### **7. Local Development**
 ```bash
 # Start local development server
 make local
@@ -170,22 +253,27 @@ curl -X POST "http://localhost:8000/api/v1/search/general" \
   -d '{"polygon": "POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))"}'
 ```
 
-### **7. Serverless Deployment**
+### **8. Optimized Serverless Deployment**
 ```bash
-# Deploy locally with temporary values
-make deploy-local
+# Deploy with optimizations (recommended)
+./scripts/deploy-optimized.sh
 
-# Deploy to development stage
-make deploy-dev
-
-# Deploy to production stage
+# Or use make command
 make deploy-prod
 
 # Deploy to production via GitHub Actions (recommended)
 git push origin developer
 ```
 
-### **8. Serverless Management**
+#### **Optimization Features**
+- ✅ **Docker-based packaging** for consistent builds
+- ✅ **Lambda Layers** for shared dependencies
+- ✅ **Package size reduction** (target: <100MB)
+- ✅ **Excluded development files** (.serverlessignore)
+- ✅ **Minimal dependencies** (requirements-prod.txt)
+- ✅ **Caching enabled** for faster deployments
+
+### **9. Serverless Management**
 ```bash
 # View deployment information
 make serverless-info
@@ -636,4 +724,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ using FastAPI, AWS Lambda, and clean architecture principles.** 
+**Built with ❤️ using FastAPI, AWS Lambda, and clean architecture principles.**

@@ -7,124 +7,130 @@ for environment variable management and type safety.
 
 import os
 from typing import List
-from pydantic import Field, field_validator, ConfigDict
+
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
-    
+
     # Application
-    APP_NAME: str = "Real Estate API"
-    VERSION: str = "1.0.0"
-    DEBUG: bool = True
-    ENVIRONMENT: str = "development"
-    
+    app_name: str = "Real Estate API"
+    app_version: str = "1.0.0"
+    debug: bool = True
+    environment: str = "development"
+
     # API Key (for external service authentication)
-    API_KEY_HEADER: str = "X-API-Key"
-    API_KEYS: List[str] = Field(default_factory=list, description="Valid API keys")
-    
+    api_key_header: str = "X-API-Key"
+    api_keys: List[str] = Field(default_factory=list, description="Valid API keys")
+
     # CORS
-    ALLOWED_HOSTS: List[str] = ["*"]
-    ALLOWED_ORIGINS: List[str] = ["*"]
-    
+    allowed_hosts: List[str] = ["*"]
+    allowed_origins: List[str] = ["*"]
+    allowed_methods: List[str] = ["*"]
+    allowed_headers: List[str] = ["*"]
+
     # Database
-    DB_HOST: str = "localhost"
-    DB_PORT: int = 3306
-    DB_USER: str = "root"
-    DB_PASSWORD: str = "password"
-    DB_NAME: str = "real_estate"
-    
+    db_host: str = "localhost"
+    db_port: int = 3306
+    db_user: str = "root"
+    db_password: str = "password"
+    db_name: str = "real_estate"
+
+    # Direct Database URL (for Lambda)
+    database_url: str = ""
+
+    # AWS VPC Configuration
+    vpc_security_group_id: str = ""
+    vpc_subnet_id_1: str = ""
+    vpc_subnet_id_2: str = ""
+
     # Logging
-    LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "json"
-    
+    log_level: str = "INFO"
+    log_format: str = "json"
+
     # External APIs
-    EXTERNAL_API_TIMEOUT: int = 30
-    EXTERNAL_API_RETRY_ATTEMPTS: int = 3
-    
+    external_api_timeout: int = 30
+    external_api_retry_attempts: int = 3
+
     # Threading
-    MAX_WORKERS: int = 4
-    THREAD_POOL_SIZE: int = 10
+    max_workers: int = 4
+    thread_pool_size: int = 10
 
     @property
-    def DATABASE_URL(self) -> str:
-        """Construct database URL from components."""
-        return (
-            f"mysql+mysqlconnector://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        )
+    def get_database_url(self) -> str:
+        """Get database URL from environment or construct from components."""
+        if self.database_url:
+            return self.database_url
+        return f"mysql+mysqlconnector://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
-    @field_validator("THREAD_POOL_SIZE", mode="before")
+    @field_validator("thread_pool_size", mode="before")
     @classmethod
     def validate_thread_pool_size(cls, v):
-        """Validate and clean THREAD_POOL_SIZE value."""
+        """Validate and clean thread_pool_size value."""
         if isinstance(v, str):
-            # Extract only the numeric part if there's concatenation
             import re
-            match = re.search(r'^(\d+)', v.strip())
+
+            match = re.search(r"^(\d+)", v.strip())
             if match:
                 return int(match.group(1))
-            # If no number found, return default
             return 10
         return v
 
-    @field_validator("DB_PORT", mode="before")
+    @field_validator("db_port", mode="before")
     @classmethod
     def validate_db_port(cls, v):
-        """Validate and clean DB_PORT value."""
+        """Validate and clean db_port value."""
         if isinstance(v, str):
-            # Extract only the numeric part if there's concatenation
             import re
-            match = re.search(r'^(\d+)', v.strip())
+
+            match = re.search(r"^(\d+)", v.strip())
             if match:
                 return int(match.group(1))
-            # If no number found, return default
             return 3306
         return v
 
-    @field_validator("EXTERNAL_API_TIMEOUT", mode="before")
+    @field_validator("external_api_timeout", mode="before")
     @classmethod
     def validate_external_api_timeout(cls, v):
-        """Validate and clean EXTERNAL_API_TIMEOUT value."""
+        """Validate and clean external_api_timeout value."""
         if isinstance(v, str):
-            # Extract only the numeric part if there's concatenation
             import re
-            match = re.search(r'^(\d+)', v.strip())
+
+            match = re.search(r"^(\d+)", v.strip())
             if match:
                 return int(match.group(1))
-            # If no number found, return default
             return 30
         return v
 
-    @field_validator("EXTERNAL_API_RETRY_ATTEMPTS", mode="before")
+    @field_validator("external_api_retry_attempts", mode="before")
     @classmethod
     def validate_external_api_retry_attempts(cls, v):
-        """Validate and clean EXTERNAL_API_RETRY_ATTEMPTS value."""
+        """Validate and clean external_api_retry_attempts value."""
         if isinstance(v, str):
-            # Extract only the numeric part if there's concatenation
             import re
-            match = re.search(r'^(\d+)', v.strip())
+
+            match = re.search(r"^(\d+)", v.strip())
             if match:
                 return int(match.group(1))
-            # If no number found, return default
             return 3
         return v
 
-    @field_validator("MAX_WORKERS", mode="before")
+    @field_validator("max_workers", mode="before")
     @classmethod
     def validate_max_workers(cls, v):
-        """Validate and clean MAX_WORKERS value."""
+        """Validate and clean max_workers value."""
         if isinstance(v, str):
-            # Extract only the numeric part if there's concatenation
             import re
-            match = re.search(r'^(\d+)', v.strip())
+
+            match = re.search(r"^(\d+)", v.strip())
             if match:
                 return int(match.group(1))
-            # If no number found, return default
             return 4
         return v
 
-    @field_validator("API_KEYS", mode="before")
+    @field_validator("api_keys", mode="before")
     @classmethod
     def validate_api_keys(cls, v) -> List[str]:
         """Parse API keys from comma-separated string or list."""
@@ -136,20 +142,20 @@ class Settings(BaseSettings):
             return []
         return v
 
-    @field_validator("ALLOWED_HOSTS", mode="before")
+    @field_validator("allowed_hosts", mode="before")
     @classmethod
     def validate_allowed_hosts(cls, v) -> List[str]:
-        """Parse ALLOWED_HOSTS from comma-separated string or list."""
+        """Parse allowed_hosts from comma-separated string or list."""
         if isinstance(v, str):
             if v == "*":
                 return ["*"]
             return [host.strip() for host in v.split(",") if host.strip()]
         return v
 
-    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @field_validator("allowed_origins", mode="before")
     @classmethod
     def validate_allowed_origins(cls, v) -> List[str]:
-        """Parse ALLOWED_ORIGINS from comma-separated string or list."""
+        """Parse allowed_origins from comma-separated string or list."""
         if isinstance(v, str):
             if v == "*":
                 return ["*"]
@@ -157,11 +163,9 @@ class Settings(BaseSettings):
         return v
 
     model_config = ConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
     )
 
 
 # Global settings instance
-settings = Settings() 
+settings = Settings()

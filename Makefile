@@ -52,7 +52,7 @@ deploy: ## Deploy to AWS Lambda (dev)
 	serverless deploy
 
 deploy-prod: ## Deploy to AWS Lambda (production)
-	./script/deploy-with-env.sh
+	./scripts/deploy-optimized.sh
 
 remove: ## Remove AWS Lambda deployment
 	serverless remove

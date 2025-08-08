@@ -10,15 +10,15 @@ provider:
 
   apiGateway:
     apiKeys:
-      - real-state-api-key-${self:provider.stage}  # Serverless crea ApiKey y UsagePlan automáticamente
+      - real-state-api-key-${self:provider.stage}
 
   environment:
-    STAGE: ${self:provider.stage}
-    DEBUG: false
-    DATABASE_URL: ${env:DATABASE_URL}
-    VPC_SECURITY_GROUP_ID: ${env:VPC_SECURITY_GROUP_ID}
-    VPC_SUBNET_ID_1: ${env:VPC_SUBNET_ID_1}
-    VPC_SUBNET_ID_2: ${env:VPC_SUBNET_ID_2}
+    stage: ${self:provider.stage}
+    debug: false
+    database_url: ${env:DATABASE_URL}
+    vpc_security_group_id: ${env:VPC_SECURITY_GROUP_ID}
+    vpc_subnet_id_1: ${env:VPC_SUBNET_ID_1}
+    vpc_subnet_id_2: ${env:VPC_SUBNET_ID_2}
 
   iam:
     role:
@@ -36,15 +36,20 @@ provider:
             - logs:PutLogEvents
           Resource: "*"
 
-  memorySize: 512
+  memorySize: 1024
   timeout: 30
   logRetentionInDays: 14
 
 functions:
   api:
     handler: app.main.handler
+    vpc:
+      securityGroupIds:
+        - ${env:VPC_SECURITY_GROUP_ID}
+      subnetIds:
+        - ${env:VPC_SUBNET_ID_1}
+        - ${env:VPC_SUBNET_ID_2}
     events:
-      # Search endpoint
       - http:
           path: /api/v1/search/general
           method: POST
@@ -54,17 +59,9 @@ functions:
 plugins:
   - serverless-python-requirements
 
-vpc:
-  securityGroupIds:
-    - ${env:VPC_SECURITY_GROUP_ID, 'sg-0123456789abcdef0'}
-  subnetIds:
-    - ${env:VPC_SUBNET_ID_1, 'subnet-0123456789abcdef0'}
-    - ${env:VPC_SUBNET_ID_2, 'subnet-0123456789abcdef1'}
-
-
 custom:
   pythonRequirements:
-    dockerizePip: non-linux
+    dockerizePip: true
     requirementsFile: requirements-prod.txt
     noDeploy:
       - black
@@ -75,8 +72,10 @@ custom:
       - pytest
       - pytest-*
       - coverage
-    zip: false
-    slim: false
+      - serverless-wsgi
+    zip: true
+    slim: true
     usePoetry: false
     useStaticCache: false
     useDownloadCache: false
+    layer: false

@@ -1,0 +1,76 @@
+# Development files
+.git/
+.gitignore
+README.md
+*.md
+.env
+.env.*
+!.env.example
+
+# Testing
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Development tools
+.pre-commit-config.yaml
+Makefile
+docker-compose.yml
+Dockerfile
+
+# Documentation
+docs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Scripts (except deployment)
+scripts/
+!scripts/deploy-*.sh
+!scripts/setup-*.sh
+
+# Package files
+package.json
+package-lock.json
+node_modules/
+
+# Serverless
+.serverless/
+!serverless.yml
+
+# Alembic (database migrations)
+alembic/
+alembic.ini

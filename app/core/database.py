@@ -5,19 +5,22 @@ This module sets up the SQLAlchemy engine and session for MySQL.
 """
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 from app.core.config import settings
 
 # SQLAlchemy engine
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.get_database_url,
     pool_pre_ping=True,
     pool_recycle=3600,
-    echo=settings.ENVIRONMENT == "development",
+    echo=settings.environment == "development",
 )
 
 # Session factory
-SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+SessionLocal = scoped_session(
+    sessionmaker(autocommit=False, autoflush=False, bind=engine)
+)
 
 
 def get_db():
@@ -30,4 +33,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()

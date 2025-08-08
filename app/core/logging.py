@@ -3,14 +3,16 @@
 import logging
 import sys
 from typing import Any, Dict
+
 import structlog
 from pythonjsonlogger import jsonlogger
+
 from app.core.config import settings
 
 
 def setup_logging() -> None:
     """Configure structured logging for the application."""
-    
+
     # Configure structlog
     structlog.configure(
         processors=[
@@ -22,7 +24,9 @@ def setup_logging() -> None:
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer() if settings.LOG_FORMAT == "json" else structlog.dev.ConsoleRenderer(),
+            structlog.processors.JSONRenderer()
+            if settings.LOG_FORMAT == "json"
+            else structlog.dev.ConsoleRenderer(),
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -40,10 +44,10 @@ def setup_logging() -> None:
 
 def get_logger(name: str) -> structlog.BoundLogger:
     """Get a structured logger instance.
-    
+
     Args:
         name: Logger name (usually __name__)
-        
+
     Returns:
         Configured structured logger
     """
@@ -52,7 +56,7 @@ def get_logger(name: str) -> structlog.BoundLogger:
 
 class LoggerMixin:
     """Mixin to add logging capabilities to classes."""
-    
+
     @property
     def logger(self) -> structlog.BoundLogger:
         """Get logger for this class."""
@@ -61,7 +65,7 @@ class LoggerMixin:
 
 def log_request_info(request_id: str, method: str, path: str, **kwargs) -> None:
     """Log request information.
-    
+
     Args:
         request_id: Unique request identifier
         method: HTTP method
@@ -70,17 +74,15 @@ def log_request_info(request_id: str, method: str, path: str, **kwargs) -> None:
     """
     logger = get_logger("request")
     logger.info(
-        "Request started",
-        request_id=request_id,
-        method=method,
-        path=path,
-        **kwargs
+        "Request started", request_id=request_id, method=method, path=path, **kwargs
     )
 
 
-def log_response_info(request_id: str, status_code: int, duration: float, **kwargs) -> None:
+def log_response_info(
+    request_id: str, status_code: int, duration: float, **kwargs
+) -> None:
     """Log response information.
-    
+
     Args:
         request_id: Unique request identifier
         status_code: HTTP status code
@@ -93,13 +95,13 @@ def log_response_info(request_id: str, status_code: int, duration: float, **kwar
         request_id=request_id,
         status_code=status_code,
         duration=duration,
-        **kwargs
+        **kwargs,
     )
 
 
 def log_error(error: Exception, context: Dict[str, Any] = None) -> None:
     """Log error with context.
-    
+
     Args:
         error: Exception to log
         context: Additional context information
@@ -109,5 +111,5 @@ def log_error(error: Exception, context: Dict[str, Any] = None) -> None:
         "Error occurred",
         error_type=type(error).__name__,
         error_message=str(error),
-        context=context or {}
-    ) 
+        context=context or {},
+    )
