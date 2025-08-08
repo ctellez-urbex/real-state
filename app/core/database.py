@@ -14,7 +14,7 @@ engine = create_engine(
     settings.get_database_url,
     pool_pre_ping=True,
     pool_recycle=3600,
-    echo=settings.environment == "development",
+    echo=settings.environment == "production",
 )
 
 # Session factory

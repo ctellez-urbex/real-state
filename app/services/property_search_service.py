@@ -66,7 +66,9 @@ class PropertySearchService:
                 barmanpre_list = self._get_properties_in_polygon(search_input.polygon)
                 if not barmanpre_list:
                     self.logger.info("No properties found within the specified polygon")
-                    return self._create_empty_response(search_input, start_time)
+                    return self._create_empty_response(
+                        search_input, request_id, timestamp
+                    )
 
             # Step 3: Fetch characteristics data (main filtering table)
             characteristics = (
@@ -81,7 +83,7 @@ class PropertySearchService:
             )
             if not filtered_characteristics:
                 self.logger.info("No properties match the specified filters")
-                return self._create_empty_response(search_input, start_time)
+                return self._create_empty_response(search_input, request_id, timestamp)
 
             # Step 5: Get additional data only for filtered properties
             final_barmanpre = [c.barmanpre for c in filtered_characteristics]
@@ -201,6 +203,7 @@ class PropertySearchService:
 
             # Create characteristics dict with only existing fields
             char_dict = {
+                "id": char.id,
                 "barmanpre": char.barmanpre,
                 "preaconst": char.preaconst,
                 "preaterre": char.preaterre,
@@ -227,23 +230,8 @@ class PropertySearchService:
 
             # Create property response
             result = PropertyResponse(
-                id=int(char.barmanpre)
-                if char.barmanpre and char.barmanpre.isdigit()
-                else hash(char.barmanpre) % 1000000
-                if char.barmanpre
-                else 0,
-                title=f"Property {char.barmanpre}",
-                description=f"Property in {char.prenbarrio or 'Unknown'} neighborhood",
-                price=None,  # Price not available in current data
-                property_type=char.preusoph,
-                area=char.preaconst,
-                address=char.formato_direccion,
-                city="Bogotá",
-                state="Cundinamarca",
-                zip_code=None,
-                is_available=True,
-                characteristics=char_dict,
-                geometry=geometry_info,
+                **char_dict,
+                wkt=geometry_info.get("wkt"),
             )
 
             results.append(result)

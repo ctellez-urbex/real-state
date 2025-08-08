@@ -205,20 +205,49 @@ class PropertyResponse(BaseModel):
     """
 
     id: int = Field(..., description="Property ID")
-    title: str = Field(..., description="Property title")
-    description: Optional[str] = Field(None, description="Property description")
-    price: Optional[float] = Field(None, description="Property price in COP")
-    property_type: Optional[str] = Field(None, description="Property type")
-    area: Optional[float] = Field(None, description="Property area in square meters")
-    address: Optional[str] = Field(None, description="Property address")
-    city: Optional[str] = Field(None, description="Property city")
-    state: Optional[str] = Field(None, description="Property state")
-    zip_code: Optional[str] = Field(None, description="Property zip code")
-    is_available: bool = Field(True, description="Property availability status")
-    characteristics: Optional[dict] = Field(
-        None, description="Property characteristics"
+    barmanpre: str = Field(..., description="Property identifier")
+    preaconst: Optional[float] = Field(
+        None, description="Construction area in square meters"
     )
-    geometry: Optional[dict] = Field(None, description="Property geometry data")
+    preaterre: Optional[float] = Field(None, description="Land area in square meters")
+    prevetustzmin: Optional[int] = Field(
+        None, description="Minimum age of the property in years"
+    )
+    prevetustzmax: Optional[int] = Field(
+        None, description="Maximum age of the property in years"
+    )
+    estrato: Optional[float] = Field(None, description="Socioeconomic stratum (1-6)")
+    predios: Optional[int] = Field(None, description="Number of properties in the lot")
+    connpisos: Optional[float] = Field(
+        None, description="Number of floors in the construction"
+    )
+    connsotano: Optional[float] = Field(None, description="Number of basement floors")
+    contsemis: Optional[float] = Field(
+        None, description="Number of semi-basement floors"
+    )
+    conelevaci: Optional[float] = Field(None, description="Number of elevator floors")
+    formato_direccion: Optional[str] = Field(
+        None, description="Formatted address of the property"
+    )
+    nombre_conjunto: Optional[str] = Field(
+        None, description="Name of the residential complex"
+    )
+    prenbarrio: Optional[str] = Field(None, description="Neighborhood name")
+    precbarrio: Optional[str] = Field(None, description="Neighborhood code")
+    locnombre: Optional[str] = Field(None, description="Locality name")
+    preusoph: Optional[str] = Field(None, description="Property use code")
+    manzcodigo: Optional[str] = Field(None, description="Block code identifier")
+    esquinero: Optional[float] = Field(
+        None, description="Corner property indicator (1=corner, 0=not corner)"
+    )
+    viaprincipal: Optional[float] = Field(
+        None, comment="Main road indicator (1=main road, 0=secondary)"
+    )
+    lista_precuso: Optional[str] = Field(None, description="List of property use codes")
+    lista_precdestin: Optional[str] = Field(
+        None, description="List of property destination codes"
+    )
+    wkt: Optional[str] = Field(None, description="Property geometry data")
 
 
 class ResponseMeta(BaseModel):
