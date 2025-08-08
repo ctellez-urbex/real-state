@@ -6,7 +6,8 @@ including validation for search parameters and polygon geometry.
 """
 
 import re
-from typing import List, Optional, Union
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -38,12 +39,14 @@ class SearchRequest(BaseModel):
     # Area filters
     min_area: Optional[float] = Field(
         None,
+        alias="areamin",
         description="Minimum area in square meters",
         ge=0,
         json_schema_extra={"example": 50.0},
     )
     max_area: Optional[float] = Field(
         None,
+        alias="areamax",
         description="Maximum area in square meters",
         ge=0,
         json_schema_extra={"example": 200.0},
@@ -52,12 +55,14 @@ class SearchRequest(BaseModel):
     # Age filters
     min_age: Optional[int] = Field(
         None,
+        alias="antiguedadmin",
         description="Minimum property age in years",
         ge=0,
         json_schema_extra={"example": 0},
     )
     max_age: Optional[int] = Field(
         None,
+        alias="antiguedadmax",
         description="Maximum property age in years",
         ge=0,
         json_schema_extra={"example": 10},
@@ -66,15 +71,17 @@ class SearchRequest(BaseModel):
     # Stratum filters
     min_stratum: Optional[int] = Field(
         None,
-        description="Minimum stratum (1-6)",
-        ge=1,
+        alias="estratomin",
+        description="Minimum stratum (0-6, 0 means no filter)",
+        ge=0,
         le=6,
         json_schema_extra={"example": 3},
     )
     max_stratum: Optional[int] = Field(
         None,
-        description="Maximum stratum (1-6)",
-        ge=1,
+        alias="estratomax",
+        description="Maximum stratum (0-6, 0 means no filter)",
+        ge=0,
         le=6,
         json_schema_extra={"example": 5},
     )
@@ -136,6 +143,8 @@ class SearchRequest(BaseModel):
             v is not None
             and "min_area" in info.data
             and info.data["min_area"] is not None
+            and v != 0  # Allow 0 as "no limit"
+            and info.data["min_area"] != 0  # Allow 0 as "no limit"
         ):
             if v <= info.data["min_area"]:
                 raise ValueError("max_area must be greater than min_area")
@@ -149,6 +158,8 @@ class SearchRequest(BaseModel):
             v is not None
             and "min_age" in info.data
             and info.data["min_age"] is not None
+            and v != 0  # Allow 0 as "no limit"
+            and info.data["min_age"] != 0  # Allow 0 as "no limit"
         ):
             if v <= info.data["min_age"]:
                 raise ValueError("max_age must be greater than min_age")
@@ -162,6 +173,8 @@ class SearchRequest(BaseModel):
             v is not None
             and "min_stratum" in info.data
             and info.data["min_stratum"] is not None
+            and v != 0  # Allow 0 as "no limit"
+            and info.data["min_stratum"] != 0  # Allow 0 as "no limit"
         ):
             if v <= info.data["min_stratum"]:
                 raise ValueError("max_stratum must be greater than min_stratum")
@@ -175,6 +188,8 @@ class SearchRequest(BaseModel):
             v is not None
             and "min_price" in info.data
             and info.data["min_price"] is not None
+            and v != 0  # Allow 0 as "no limit"
+            and info.data["min_price"] != 0  # Allow 0 as "no limit"
         ):
             if v <= info.data["min_price"]:
                 raise ValueError("max_price must be greater than min_price")
@@ -206,6 +221,20 @@ class PropertyResponse(BaseModel):
     geometry: Optional[dict] = Field(None, description="Property geometry data")
 
 
+class ResponseMeta(BaseModel):
+    """
+    Response metadata model.
+
+    Contains additional information about the request and response.
+    """
+
+    timestamp: datetime = Field(..., description="Response timestamp")
+    request_id: str = Field(..., description="Unique request identifier")
+    filters_applied: Dict[str, Any] = Field(
+        ..., description="Filters that were applied to the search"
+    )
+
+
 class SearchResponse(BaseModel):
     """
     Search response model.
@@ -220,4 +249,4 @@ class SearchResponse(BaseModel):
     total: int = Field(..., description="Total number of results")
     limit: int = Field(..., description="Results limit used")
     offset: int = Field(..., description="Results offset used")
-    request_id: Optional[str] = Field(None, description="Unique request identifier")
+    meta: ResponseMeta = Field(..., description="Response metadata")

@@ -4,14 +4,19 @@ Clean architecture with proper separation of concerns.
 """
 import time
 from datetime import datetime
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
 from app.repositories.property_repository import PropertyRepository
 from app.repositories.property_use_repository import PropertyUseRepository
-from app.schemas.search import PropertyResponse, SearchRequest, SearchResponse
+from app.schemas.search import (
+    PropertyResponse,
+    ResponseMeta,
+    SearchRequest,
+    SearchResponse,
+)
 
 
 class PropertySearchService:
@@ -31,15 +36,19 @@ class PropertySearchService:
         self.property_use_repository = PropertyUseRepository(db)
         self.logger = get_logger(__name__)
 
-    def search_properties(self, search_input: SearchRequest) -> SearchResponse:
+    def search_properties(
+        self, search_input: SearchRequest, request_id: str, timestamp: datetime
+    ) -> SearchResponse:
         """
         Main search method that orchestrates the entire search process.
 
         Args:
             search_input: Search criteria and filters
+            request_id: Unique identifier for this request
+            timestamp: Request timestamp
 
         Returns:
-            SearchResponse: Formatted search results
+            SearchResponse: Formatted search results with metadata
         """
         start_time = time.time()
 
@@ -49,7 +58,7 @@ class PropertySearchService:
                 search_input.polygon
             ):
                 self.logger.warning(f"Invalid polygon provided: {search_input.polygon}")
-                return self._create_empty_response(search_input, start_time)
+                return self._create_empty_response(search_input, request_id, timestamp)
 
             # Step 2: Get properties within polygon (if provided)
             barmanpre_list = []
@@ -93,11 +102,11 @@ class PropertySearchService:
             return SearchResponse(
                 success=True,
                 message=f"Found {len(property_results)} properties",
+                meta=self._create_response_meta(search_input, request_id, timestamp),
                 data=property_results,
                 total=len(property_results),
                 limit=search_input.limit,
                 offset=search_input.offset,
-                request_id=f"req_{int(time.time())}",
             )
 
         except Exception as e:
@@ -241,8 +250,52 @@ class PropertySearchService:
 
         return results
 
+    def _create_response_meta(
+        self, search_input: SearchRequest, request_id: str, timestamp: datetime
+    ) -> ResponseMeta:
+        """Create response metadata with applied filters."""
+        # Extract ALL applied filters from the original request (non-None and non-zero values)
+        filters_applied = {}
+
+        # Get all fields from the search_input model using aliases (original field names)
+        for field_name, field_value in search_input.model_dump(by_alias=True).items():
+            # Include filter if it has a meaningful value
+            if field_value is not None:
+                # Special handling for different field types
+                if isinstance(field_value, str):
+                    if field_value.strip():  # Non-empty string
+                        if field_name == "polygon":
+                            # Truncate long polygon strings
+                            filters_applied[field_name] = (
+                                field_value[:100] + "..."
+                                if len(field_value) > 100
+                                else field_value
+                            )
+                        else:
+                            filters_applied[field_name] = field_value
+                elif isinstance(field_value, list):
+                    if field_value:  # Non-empty list
+                        filters_applied[field_name] = field_value
+                elif isinstance(field_value, (int, float)):
+                    # Include non-zero numbers or if they are meaningful defaults
+                    if field_value != 0 or field_name in ["limit", "offset"]:
+                        # Only include limit/offset if different from defaults
+                        if field_name == "limit" and field_value == 100:
+                            continue  # Skip default limit
+                        elif field_name == "offset" and field_value == 0:
+                            continue  # Skip default offset
+                        else:
+                            filters_applied[field_name] = field_value
+                else:
+                    # Include any other non-None values
+                    filters_applied[field_name] = field_value
+
+        return ResponseMeta(
+            timestamp=timestamp, request_id=request_id, filters_applied=filters_applied
+        )
+
     def _create_empty_response(
-        self, search_input: SearchRequest, start_time: float
+        self, search_input: SearchRequest, request_id: str, timestamp: datetime
     ) -> SearchResponse:
         """Create empty response when no results found."""
         return SearchResponse(
@@ -252,5 +305,5 @@ class PropertySearchService:
             total=0,
             limit=search_input.limit,
             offset=search_input.offset,
-            request_id=f"req_{int(time.time())}",
+            meta=self._create_response_meta(search_input, request_id, timestamp),
         )

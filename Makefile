@@ -72,6 +72,9 @@ check-env: ## Check environment variables configuration
 setup-aws: ## Setup AWS credentials
 	@./scripts/setup-aws.sh
 
+cleanup-vpc: ## Clean up VPC resources (no longer needed for external DB)
+	@./scripts/cleanup-vpc.sh
+
 deploy-check: check-env ## Check environment before deployment
 	@echo "Environment check completed. Run 'make deploy-prod' to deploy."
 

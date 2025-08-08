@@ -2,6 +2,9 @@
 Search Endpoints - Clean Architecture
 Proper separation of concerns with clean dependency injection.
 """
+import uuid
+from datetime import datetime
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -36,17 +39,23 @@ async def general_search(
     - Background task support for metrics
     """
     try:
+        # Generate request metadata
+        request_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow()
+
         logger.info(
-            f"Received search request with polygon: {search_input.polygon[:50] if search_input.polygon else 'None'}..."
+            f"[{request_id}] Received search request with polygon: {search_input.polygon[:50] if search_input.polygon else 'None'}..."
         )
 
         # Add background task for metrics collection
-        background_tasks.add_task(_collect_search_metrics, search_input)
+        background_tasks.add_task(_collect_search_metrics, search_input, request_id)
 
         # Execute search using clean service
-        result = search_service.search_properties(search_input)
+        result = search_service.search_properties(search_input, request_id, timestamp)
 
-        logger.info(f"Search completed. Found {len(result.data)} properties")
+        logger.info(
+            f"[{request_id}] Search completed. Found {len(result.data)} properties"
+        )
         return result
 
     except Exception as e:
@@ -89,7 +98,9 @@ async def get_metrics():
     }
 
 
-async def _collect_search_metrics(search_input: SearchRequest):
+async def _collect_search_metrics(search_input: SearchRequest, request_id: str):
     """Background task to collect search metrics."""
     # TODO: Implement metrics collection
-    logger.info(f"Collecting metrics for search: {search_input.tipoinmueble}")
+    logger.info(
+        f"[{request_id}] Collecting metrics for search: {search_input.tipoinmueble}"
+    )
