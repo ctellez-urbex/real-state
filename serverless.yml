@@ -16,19 +16,21 @@ provider:
     stage: ${self:provider.stage}
     debug: false
     database_url: ${env:DATABASE_URL}
-    vpc_security_group_id: ${env:VPC_SECURITY_GROUP_ID}
-    vpc_subnet_id_1: ${env:VPC_SUBNET_ID_1}
-    vpc_subnet_id_2: ${env:VPC_SUBNET_ID_2}
+    # VPC environment variables removed (no longer needed for external DB)
+    # vpc_security_group_id: ${env:VPC_SECURITY_GROUP_ID}
+    # vpc_subnet_id_1: ${env:VPC_SUBNET_ID_1}
+    # vpc_subnet_id_2: ${env:VPC_SUBNET_ID_2}
 
   iam:
     role:
       statements:
-        - Effect: Allow
-          Action:
-            - ec2:CreateNetworkInterface
-            - ec2:DescribeNetworkInterfaces
-            - ec2:DeleteNetworkInterface
-          Resource: "*"
+        # VPC-related permissions removed (no longer needed for external DB)
+        # - Effect: Allow
+        #   Action:
+        #     - ec2:CreateNetworkInterface
+        #     - ec2:DescribeNetworkInterfaces
+        #     - ec2:DeleteNetworkInterface
+        #   Resource: "*"
         - Effect: Allow
           Action:
             - logs:CreateLogGroup
@@ -43,12 +45,13 @@ provider:
 functions:
   api:
     handler: app.main.handler
-    vpc:
-      securityGroupIds:
-        - ${env:VPC_SECURITY_GROUP_ID}
-      subnetIds:
-        - ${env:VPC_SUBNET_ID_1}
-        - ${env:VPC_SUBNET_ID_2}
+    # VPC configuration removed to allow internet access for external database
+    # vpc:
+    #   securityGroupIds:
+    #     - ${env:VPC_SECURITY_GROUP_ID}
+    #   subnetIds:
+    #     - ${env:VPC_SUBNET_ID_1}
+    #     - ${env:VPC_SUBNET_ID_2}
     events:
       - http:
           path: /api/v1/search/general

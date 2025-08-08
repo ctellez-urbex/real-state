@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     app_name: str = "Real Estate API"
     app_version: str = "1.0.0"
     debug: bool = True
-    environment: str = "development"
+    environment: str = "production"
 
     # API Key (for external service authentication)
     api_key_header: str = "X-API-Key"
