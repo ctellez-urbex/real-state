@@ -21,6 +21,9 @@ required_vars=(
     "DATABASE_URL"
     "SECRET_KEY"
     "AWS_REGION"
+    "VPC_SECURITY_GROUP_ID"
+    "VPC_SUBNET_ID_1"
+    "VPC_SUBNET_ID_2"
 )
 
 missing_vars=()

@@ -52,7 +52,7 @@ deploy: ## Deploy to AWS Lambda (dev)
 	serverless deploy
 
 deploy-prod: ## Deploy to AWS Lambda (production)
-	./scripts/deploy-optimized.sh
+	./scripts/deploy-with-env.sh
 
 remove: ## Remove AWS Lambda deployment
 	serverless remove
@@ -64,13 +64,13 @@ setup: install-dev ## Setup development environment
 	@echo "Development environment setup complete!"
 
 setup-env: ## Setup environment variables with API keys
-	@./script/setup-env.sh
+	@./scripts/setup-env.sh
 
 check-env: ## Check environment variables configuration
-	@./script/check-env.sh
+	@./scripts/check-env.sh
 
 setup-aws: ## Setup AWS credentials
-	@./script/setup-aws.sh
+	@./scripts/setup-aws.sh
 
 deploy-check: check-env ## Check environment before deployment
 	@echo "Environment check completed. Run 'make deploy-prod' to deploy."

@@ -64,7 +64,7 @@ fi
 
 # Deploy with optimization
 print_status "Deploying with optimizations..."
-serverless deploy --stage prod --verbose
+serverless deploy --stage prod
 
 # Check deployment size
 print_status "Checking deployment size..."

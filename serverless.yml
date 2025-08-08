@@ -61,7 +61,7 @@ plugins:
 
 custom:
   pythonRequirements:
-    dockerizePip: true
+    dockerizePip: non-linux
     requirementsFile: requirements-prod.txt
     noDeploy:
       - black
@@ -73,8 +73,8 @@ custom:
       - pytest-*
       - coverage
       - serverless-wsgi
-    zip: true
-    slim: true
+    zip: false
+    slim: false
     usePoetry: false
-    useStaticCache: true
-    useDownloadCache: true
+    useStaticCache: false
+    useDownloadCache: false
