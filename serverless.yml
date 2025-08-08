@@ -76,6 +76,5 @@ custom:
     zip: true
     slim: true
     usePoetry: false
-    useStaticCache: false
-    useDownloadCache: false
-    layer: false
+    useStaticCache: true
+    useDownloadCache: true
