@@ -60,6 +60,7 @@ class PropertyRepository:
                 f"barmanpre_{i}": barmanpre
                 for i, barmanpre in enumerate(barmanpre_list)
             }
+
             result = self.db.execute(query, params)
             rows = result.fetchall()
 

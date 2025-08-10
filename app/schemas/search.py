@@ -62,7 +62,7 @@ class SearchRequest(BaseModel):
     )
     max_age: Optional[int] = Field(
         None,
-        alias="antiguedadmax",
+        alias="max_age",
         description="Maximum property age in years",
         ge=0,
         json_schema_extra={"example": 10},
