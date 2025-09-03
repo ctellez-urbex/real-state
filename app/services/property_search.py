@@ -4,13 +4,13 @@ Clean architecture with proper separation of concerns.
 """
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
-from app.repositories.property_repository import PropertyRepository
-from app.repositories.property_use_repository import PropertyUseRepository
+from app.repositories.property import PropertyRepository
+from app.repositories.property_use import PropertyUseRepository
 from app.schemas.search import (
     PropertyResponse,
     ResponseMeta,
@@ -19,7 +19,7 @@ from app.schemas.search import (
 )
 
 
-class PropertySearchService:
+class PropertySearch:
     """
     Clean property search service following proper architecture patterns.
 
@@ -126,15 +126,17 @@ class PropertySearchService:
         filtered = []
 
         for char in characteristics:
-            # Area filters
+            # Area filters - only apply if values are provided and > 0
             if (
-                search_input.min_area
+                search_input.min_area is not None
+                and search_input.min_area > 0
                 and char.preaconst
                 and char.preaconst < search_input.min_area
             ):
                 continue
             if (
-                search_input.max_area
+                search_input.max_area is not None
+                and search_input.max_area > 0
                 and char.preaconst
                 and char.preaconst > search_input.max_area
             ):
@@ -142,27 +144,31 @@ class PropertySearchService:
 
             # Age filters - using prevetustzmin and prevetustzmax instead of prevetustz
             if (
-                search_input.min_age
+                search_input.min_age is not None
+                and search_input.min_age > 0
                 and char.prevetustzmin
                 and char.prevetustzmin < search_input.min_age
             ):
                 continue
             if (
-                search_input.max_age
+                search_input.max_age is not None
+                and search_input.max_age > 0
                 and char.prevetustzmax
                 and char.prevetustzmax > search_input.max_age
             ):
                 continue
 
-            # Stratum filters
+            # Stratum filters - only apply if values are provided and > 0
             if (
-                search_input.min_stratum
+                search_input.min_stratum is not None
+                and search_input.min_stratum > 0
                 and char.estrato
                 and char.estrato < search_input.min_stratum
             ):
                 continue
             if (
-                search_input.max_stratum
+                search_input.max_stratum is not None
+                and search_input.max_stratum > 0
                 and char.estrato
                 and char.estrato > search_input.max_stratum
             ):

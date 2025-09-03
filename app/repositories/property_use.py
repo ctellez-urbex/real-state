@@ -3,8 +3,6 @@ Property Use Repository - Handles property use classifications and mappings.
 """
 from typing import Any, Dict, List
 
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger

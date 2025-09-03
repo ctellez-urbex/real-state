@@ -11,22 +11,22 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.logging import get_logger
 from app.schemas.search import SearchRequest, SearchResponse
-from app.services.property_search_service import PropertySearchService
+from app.services.property_search import PropertySearch
 
 router = APIRouter()
 logger = get_logger(__name__)
 
 
-def get_search_service(db: Session = Depends(get_db)) -> PropertySearchService:
+def get_search_service(db: Session = Depends(get_db)) -> PropertySearch:
     """Dependency injection for search service."""
-    return PropertySearchService(db)
+    return PropertySearch(db)
 
 
 @router.post("/general", response_model=SearchResponse)
 async def general_search(
     search_input: SearchRequest,
     background_tasks: BackgroundTasks,
-    search_service: PropertySearchService = Depends(get_search_service),
+    search_service: PropertySearch = Depends(get_search_service),
 ):
     """
     Property search endpoint with clean architecture.

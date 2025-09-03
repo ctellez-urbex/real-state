@@ -406,6 +406,79 @@ POST /api/v1/search/general
 }
 ```
 
+**Building Detail**
+```http
+POST /api/v1/building/getDetalleBuilding
+```
+
+**Request Body:**
+```json
+{
+  "barmanpre": "11001100100100000000000129",
+  "get_tabla": true,
+  "get_tabla_last_year": false,
+  "max_workers": 3
+}
+```
+
+**Response:**
+```json
+{
+  "meta": {
+    "timestamp": "2024-01-15T10:30:00.000Z",
+    "requestId": "uuid-request-id"
+  },
+  "data": {
+    "lotes_caracteristicas": {
+      "formato_direccion": "CALLE 123 # 45-67",
+      "lista_precuso": "001|002",
+      "preaconst": 120.5,
+      "preaterre": 150.0,
+      "estrato": 4
+    },
+    "lotes_construcciones": {
+      "connpisos": 3,
+      "connsotano": 0,
+      "conelevaci": 2
+    },
+    "prediales": {
+      "predios": [
+        {
+          "predirecc": "CALLE 123 # 45-67",
+          "avaluo_catastral": 500000000
+        }
+      ]
+    },
+    "transacciones": {
+      "tabla_transacciones": [
+        {
+          "fecha_escritura": "2023-12-01",
+          "valor_transaccion": 450000000,
+          "predirecc": "CALLE 123 # 45-67"
+        }
+      ]
+    },
+    "market_analysis": {
+      "precio_promedio_m2": 3500000,
+      "tendencia_mercado": "estable"
+    },
+    "market_statistics": {
+      "ofertas_activas": 25,
+      "tiempo_promedio_venta": 90
+    }
+  }
+}
+```
+
+**Description:**
+Provides comprehensive building detail information including property characteristics, construction details, ownership data, transaction history, market analysis, and regulatory information. This endpoint uses multi-phase concurrent data collection for optimal performance.
+
+**Parameters:**
+- `barmanpre` (required): Property unique identifier
+- `get_tabla` (optional): Include table data in response (default: false)
+- `get_tabla_last_year` (optional): Include last year table data (default: false)
+- `max_workers` (optional): Maximum concurrent workers (1-10, default: 3)
+
 #### **🔓 Public Endpoints (No Authentication)**
 
 **Health Check**

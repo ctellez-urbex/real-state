@@ -118,7 +118,7 @@ class SearchRequest(BaseModel):
     @field_validator("polygon")
     @classmethod
     def validate_polygon(cls, v):
-        """Validate polygon WKT format."""
+        """Validate and fix polygon WKT format."""
         if v is None:
             return v
 
@@ -128,10 +128,34 @@ class SearchRequest(BaseModel):
 
         # Basic WKT polygon validation
         polygon_pattern = r"^POLYGON\s*\(\s*\(\s*([^)]+)\s*\)\s*\)$"
-        if not re.match(polygon_pattern, v, re.IGNORECASE):
+        match = re.match(polygon_pattern, v, re.IGNORECASE)
+        if not match:
             raise ValueError(
                 "Invalid polygon WKT format. Expected: POLYGON((x1 y1, x2 y2, ...))"
             )
+
+        # Extract coordinates
+        coords_str = match.group(1)
+        coords = [coord.strip() for coord in coords_str.split(",")]
+
+        # Check if polygon is properly closed
+        if len(coords) >= 3:
+            first_coord = coords[0].strip()
+            last_coord = coords[-1].strip()
+
+            # Check if polygon is already closed
+            if first_coord == last_coord:
+                # Polygon is already closed, no action needed
+                print(f"✅ Polygon is already properly closed")
+            else:
+                # Polygon is not closed, add the first coordinate at the end
+                coords.append(first_coord)
+                # Reconstruct the polygon
+                v = f"POLYGON(({', '.join(coords)}))"
+                print(
+                    f"🔧 Auto-closed polygon by adding first coordinate: {first_coord}"
+                )
+                print(f"🔧 Final polygon: {v}")
 
         return v
 

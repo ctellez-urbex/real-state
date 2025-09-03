@@ -13,24 +13,24 @@ This test suite provides comprehensive coverage for:
 
 import uuid
 from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.api.v1.endpoints.search import general_search, get_search_service
+from app.api.v1.endpoints.search import get_search_service
 from app.main import app
-from app.models import BogotaDataCaracteristicas, BogotaDataPredios
-from app.repositories.property_repository import PropertyRepository
+from app.models import BogotaDataCaracteristicas
+from app.repositories.property import PropertyRepository
 from app.schemas.search import (
     PropertyResponse,
     ResponseMeta,
     SearchRequest,
     SearchResponse,
 )
-from app.services.property_search_service import PropertySearchService
+from app.services.property_search import PropertySearch
 
 # Test client will be created in each test method to avoid initialization issues
 
@@ -67,6 +67,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_empty_results(self):
         """Test search with polygon that returns no results."""
         # Arrange - polygon in area with no properties
+        client = TestClient(app)
         payload = {
             "tipoinmueble": ["Todos"],
             "polygon": "POLYGON ((0 0, 0.001 0, 0.001 0.001, 0 0.001, 0 0))",
@@ -87,6 +88,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_with_filters(self):
         """Test search with various filters applied."""
         # Arrange
+        client = TestClient(app)
         payload = {
             "tipoinmueble": ["Todos"],
             "polygon": VALID_POLYGON,
@@ -113,6 +115,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_pagination(self):
         """Test search with pagination parameters."""
         # Arrange
+        client = TestClient(app)
         payload = {
             "tipoinmueble": ["Todos"],
             "polygon": VALID_POLYGON,
@@ -133,6 +136,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_missing_api_key(self):
         """Test search without API key (should fail)."""
         # Arrange
+        client = TestClient(app)
         payload = {"tipoinmueble": ["Todos"], "polygon": VALID_POLYGON}
 
         # Act
@@ -144,6 +148,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_invalid_api_key(self):
         """Test search with invalid API key."""
         # Arrange
+        client = TestClient(app)
         payload = {"tipoinmueble": ["Todos"], "polygon": VALID_POLYGON}
         headers = {"Content-Type": "application/json", "x-api-key": "invalid-key"}
 
@@ -156,6 +161,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_invalid_polygon_format(self):
         """Test search with invalid polygon format."""
         # Arrange
+        client = TestClient(app)
         payload = {"tipoinmueble": ["Todos"], "polygon": INVALID_POLYGON}
         headers = {"Content-Type": "application/json", "x-api-key": VALID_API_KEY}
 
@@ -168,6 +174,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_invalid_parameters(self):
         """Test search with invalid parameter values."""
         # Arrange
+        client = TestClient(app)
         payload = {
             "tipoinmueble": ["Todos"],
             "polygon": VALID_POLYGON,
@@ -185,6 +192,7 @@ class TestSearchEndpointIntegration:
     def test_general_search_malformed_json(self):
         """Test search with malformed JSON."""
         # Arrange
+        client = TestClient(app)
         malformed_json = '{"tipoinmueble": ["Todos", "polygon": invalid}'
         headers = {"Content-Type": "application/json", "x-api-key": VALID_API_KEY}
 
@@ -197,14 +205,14 @@ class TestSearchEndpointIntegration:
         assert response.status_code == 422  # JSON decode error
 
 
-class TestPropertySearchService:
-    """Unit tests for PropertySearchService."""
+class TestPropertySearch:
+    """Unit tests for PropertySearch."""
 
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_db = Mock(spec=Session)
         self.mock_repository = Mock(spec=PropertyRepository)
-        self.service = PropertySearchService(self.mock_db)
+        self.service = PropertySearch(self.mock_db)
         self.service.repository = self.mock_repository
 
     def test_search_properties_successful_flow(self):
@@ -770,7 +778,7 @@ class TestDependencyInjection:
         service = get_search_service(mock_db)
 
         # Assert
-        assert isinstance(service, PropertySearchService)
+        assert isinstance(service, PropertySearch)
         assert service.db == mock_db
 
 
@@ -784,9 +792,8 @@ class TestErrorHandling:
         headers = {"Content-Type": "application/json", "x-api-key": VALID_API_KEY}
 
         # Mock the service to raise an exception
-        with patch(
-            "app.api.v1.endpoints.search.PropertySearchService"
-        ) as mock_service_class:
+        with patch("app.api.v1.endpoints.search.PropertySearch") as mock_service_class:
+            client = TestClient(app)
             mock_service = Mock()
             mock_service.search_properties.side_effect = Exception(
                 "Simulated database error"
@@ -808,7 +815,7 @@ class TestErrorHandling:
         # Arrange
         mock_db = Mock(spec=Session)
         mock_repository = Mock(spec=PropertyRepository)
-        service = PropertySearchService(mock_db)
+        service = PropertySearch(mock_db)
         service.repository = mock_repository
 
         search_input = SearchRequest(tipoinmueble=["Todos"], polygon=VALID_POLYGON)
@@ -831,6 +838,7 @@ class TestPerformanceAndEdgeCases:
     def test_search_with_large_polygon(self):
         """Test search with large polygon."""
         # Arrange - Large polygon covering significant area
+        client = TestClient(app)
         large_polygon = (
             "POLYGON ((-74.1 4.6, -74.0 4.6, -74.0 4.7, -74.1 4.7, -74.1 4.6))"
         )
@@ -852,6 +860,7 @@ class TestPerformanceAndEdgeCases:
     def test_search_with_zero_filters(self):
         """Test search with filters set to zero (edge case)."""
         # Arrange
+        client = TestClient(app)
         payload = {
             "tipoinmueble": ["Todos"],
             "polygon": VALID_POLYGON,
@@ -873,6 +882,7 @@ class TestPerformanceAndEdgeCases:
     def test_search_with_maximum_limit(self):
         """Test search with maximum allowed limit."""
         # Arrange
+        client = TestClient(app)
         payload = {
             "tipoinmueble": ["Todos"],
             "polygon": VALID_POLYGON,
@@ -891,6 +901,7 @@ class TestPerformanceAndEdgeCases:
     def test_search_metadata_completeness(self):
         """Test that search metadata is complete and accurate."""
         # Arrange
+        client = TestClient(app)
         payload = {
             "tipoinmueble": ["Todos"],
             "polygon": VALID_POLYGON,
